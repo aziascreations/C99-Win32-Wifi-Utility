@@ -1,4 +1,17 @@
 .idea/
 
 cmake-*/
+CMakeFiles/
 
+*.vcxproj
+*.vcxproj.filters
+*.cmake
+CMakeCache.txt
+*.tcl
+*.sln
+x64/
+wifi.dir/
+Testing/
+Debug/
+
+build/

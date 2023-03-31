@@ -56,12 +56,15 @@ message("----> CMAKE_STATIC_LINKER_FLAGS: ${CMAKE_STATIC_LINKER_FLAGS}")
 
 message("--> Checking for platform-specific arguments for the compiler")
 if (CYGWIN)
-    # Does not work !
+    # Does not work, God I hate Cygwin...
+    # At least you don't get a multi-MiB file because dead code removal is hard, aww...
     # See: https://cygwin.com/faq/faq.html#faq.programming.static-linking
-    message("---> Detected Cygwin, adding \"-static\" to \"CMAKE_C_FLAGS\"")
+    #message("---> Detected Cygwin, adding \"-static\" to \"CMAKE_C_FLAGS\"")
     #set(CMAKE_C_FLAGS "-static ${CMAKE_C_FLAGS}")
+    message("---> Detected Cygwin.")
+    message("---> Good luck, you're on your own there bud...")
 elseif (MSVC)
-    message("---> Detected MSVC compiler, adding custom flags")
+    message("---> Detected MSVC compiler, adding custom flags to compiler and linker...")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gy /Oy")
     # /Zl seems to affect the implicitly included .lib
     set(CMAKE_C_FLAGS_RELEASE "/Ot ${CMAKE_C_FLAGS_RELEASE}")
@@ -96,13 +99,12 @@ elseif (MSVC)
     #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WX")
 
     # One or both of these options triggers some AV on VirusTotal:
-    # Rising: HackTool.CoinMiner!8.F154 (TFE:1:avQASvlVVsP)
-    # SecureAge: Malicious
-    # https://www.virustotal.com/gui/file/27b1fc390c1ef5b27351e0c7c752329ee9206329bcbff2bacfae629df60e9c04?nocache=1
-    # Welp, it also seems to make it unable to use the app on Windows 10 64bits, bruh...
+    #  * Rising: HackTool.CoinMiner!8.F154 (TFE:1:avQASvlVVsP)
+    #  * SecureAge: Malicious
+    #  * Sample: https://www.virustotal.com/gui/file/27b1fc390c1ef5b27351e0c7c752329ee9206329bcbff2bacfae629df60e9c04?nocache=1
+    # Welp, after more testing, it also seems to make it unable to use the app on Windows 10 x64, bruh...
     # The gains were half a KB anyway.
-    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /MERGE:.rdata=.data /MERGE:.text=.data")
-    # /MERGE:.reloc=.data
+    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /MERGE:.rdata=.data /MERGE:.text=.data")  # /MERGE:.reloc=.data
 else ()
     message("---> No actions taken")
 endif ()
@@ -119,8 +121,44 @@ message("----> CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
 message("----> CMAKE_MODULE_LINKER_FLAGS: ${CMAKE_MODULE_LINKER_FLAGS}")
 message("----> CMAKE_STATIC_LINKER_FLAGS: ${CMAKE_STATIC_LINKER_FLAGS}")
 
+# Setting environment variables
+message("---> Custom environment variables:")
+
+# > Version
+string(TIMESTAMP CURRENT_YEAR_LONG "%Y")
+string(TIMESTAMP CURRENT_MONTH "%m")
+string(TIMESTAMP CURRENT_DAY "%d")
+string(SUBSTRING ${CURRENT_YEAR_LONG} 2 -1 CURRENT_YEAR)
+set(ENV{NP_BUILD_WIFI_CLI_VERSION_MAJOR} ${CURRENT_YEAR})
+set(ENV{NP_BUILD_WIFI_CLI_VERSION_MINOR} ${CURRENT_MONTH})
+set(ENV{NP_BUILD_WIFI_CLI_VERSION_PATCH} ${CURRENT_DAY})
+set(ENV{NP_BUILD_WIFI_CLI_VERSION_EXTRA} 0)
+add_compile_definitions(NP_BUILD_WIFI_CLI_VERSION_MAJOR=$ENV{NP_BUILD_WIFI_CLI_VERSION_MAJOR})
+add_compile_definitions(NP_BUILD_WIFI_CLI_VERSION_MINOR=$ENV{NP_BUILD_WIFI_CLI_VERSION_MINOR})
+add_compile_definitions(NP_BUILD_WIFI_CLI_VERSION_PATCH=$ENV{NP_BUILD_WIFI_CLI_VERSION_PATCH})
+add_compile_definitions(NP_BUILD_WIFI_CLI_VERSION_EXTRA=$ENV{NP_BUILD_WIFI_CLI_VERSION_EXTRA})
+add_compile_definitions(NP_BUILD_WIFI_CLI_VERSION="$ENV{NP_BUILD_WIFI_CLI_VERSION_MAJOR}.$ENV{NP_BUILD_WIFI_CLI_VERSION_MINOR}.$ENV{NP_BUILD_WIFI_CLI_VERSION_PATCH}.$ENV{NP_BUILD_WIFI_CLI_VERSION_EXTRA}")
+message("----> NP_BUILD_WIFI_CLI_VERSION_MAJOR: $ENV{NP_BUILD_WIFI_CLI_VERSION_MAJOR}")
+message("----> NP_BUILD_WIFI_CLI_VERSION_MINOR: $ENV{NP_BUILD_WIFI_CLI_VERSION_MINOR}")
+message("----> NP_BUILD_WIFI_CLI_VERSION_PATCH: $ENV{NP_BUILD_WIFI_CLI_VERSION_PATCH}")
+message("----> NP_BUILD_WIFI_CLI_VERSION_EXTRA: $ENV{NP_BUILD_WIFI_CLI_VERSION_EXTRA}")
+
+# > Program's name
+set(ENV{NP_BUILD_GENERAL_PROJECT_NAME} ${CMAKE_PROJECT_NAME})
+add_compile_definitions(NP_BUILD_GENERAL_PROJECT_NAME="$ENV{NP_BUILD_GENERAL_PROJECT_NAME}")
+
+
+# TODO: Set MSVC version !
+
 # Preparing targets
 file(GLOB_RECURSE src_nibblepoker_c_goodies CONFIGURE_DEPENDS "libs/nibblepoker-c-goodies/src/*.h" "libs/nibblepoker-c-goodies/src/*.c" rsc/rc/lscom-cli.rc)
 
-add_executable(wifi_utility main.c ${src_nibblepoker_c_goodies})
-#target_compile_definitions(wifi_utility PUBLIC NP_DEBUG_LOGGING)
+add_executable(wifi src/cli/main.c ${src_nibblepoker_c_goodies})
+target_link_libraries(wifi Wlanapi.lib)
+
+#target_compile_definitions(wifi PUBLIC NP_DEBUG_LOGGING)
+
+# CLion couldn't give two shits about these and actually have them work out of the box, how lovely...
+#add_custom_target(run-version COMMAND wifi --build-info COMMENT "Show the version text" DEPENDS wifi)
+#add_custom_target(run-build COMMAND wifi --version COMMENT "Show the build info" DEPENDS wifi)
+#add_custom_target(run-help-root COMMAND wifi --help COMMENT "Show the root's help text" DEPENDS wifi)
