@@ -154,15 +154,15 @@ add_compile_definitions(NP_BUILD_GENERAL_PROJECT_NAME="$ENV{NP_BUILD_GENERAL_PRO
 # Preparing targets
 file(GLOB_RECURSE src_nibblepoker_c_goodies CONFIGURE_DEPENDS "libs/nibblepoker-c-goodies/src/*.h" "libs/nibblepoker-c-goodies/src/*.c")
 file(GLOB_RECURSE src_wifi_commons CONFIGURE_DEPENDS "src/commons/*.h" "src/commons/*.c")
+file(GLOB_RECURSE src_wifi_cli CONFIGURE_DEPENDS "src/cli/handlers/*.c" "src/cli/handlers/*.h")
 
-add_executable(wifi_cli src/cli/main.c ${src_nibblepoker_c_goodies} ${src_wifi_commons} rsc/rc/wifi-cli.rc)
+add_executable(wifi_cli src/cli/main.c ${src_nibblepoker_c_goodies} ${src_wifi_commons} ${src_wifi_cli} rsc/rc/wifi-cli.rc)
 set_target_properties(wifi_cli PROPERTIES OUTPUT_NAME "wifi")
 set_target_properties(wifi_cli PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:CONSOLE")
 target_link_libraries(wifi_cli Wlanapi.lib)
 
 add_executable(wifi_gui src/gui/main.c ${src_nibblepoker_c_goodies} ${src_wifi_commons} rsc/rc/wifi-gui.rc)
 set_target_properties(wifi_gui PROPERTIES OUTPUT_NAME "Wi-Fi Toolbox")
-#set_target_properties(wifi_gui PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:WinMainCRTStartup /SUBSYSTEM:WINDOWS")
 set_target_properties(wifi_gui PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:wWinMainCRTStartup /SUBSYSTEM:WINDOWS")
 target_link_libraries(wifi_gui Wlanapi.lib)
 

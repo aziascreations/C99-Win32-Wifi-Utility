@@ -8,12 +8,39 @@
 
 #include "../../libs/nibblepoker-c-goodies/src/arguments/arguments.h"
 #include "../../libs/nibblepoker-c-goodies/src/debug.h"
+#include "../../libs/nibblepoker-c-goodies/src/text.h"
 
-static Verb *rootVerb;
-static Option *helpOption, *buildInfoOption, *versionInfoOption, *versionOnlyInfoOption;
+#include "./handlers/iface.h"
+
+static Verb *rootVerb, *ifaceRootVerb, *ifaceListVerb;
+
+// Recursively shared options
+static Option *helpOption;
+
+// Partially shared options
+static Option *textDelimiterOption;
+
+// Root's options
+static Option *buildInfoOption, *versionInfoOption, *versionOnlyInfoOption;
+
+// Iface listing formatting options
+static Option *ifaceListShowAllOption, *ifaceListShowIndexOption, *ifaceListShowGuidOption, *ifaceListShowDescriptionOption,
+		*ifaceListShowStateOption, *ifaceListShowFormattedStateOption;
 
 bool prepareLaunchArguments() {
+	// Root verb
 	rootVerb = args_createVerb("root", "Test");
+	
+	// Recursively shared options
+	// TODO: Add a args_registerRecursiveOption !
+	helpOption = args_createOption('h', "help", "Shows this help text and exit", FLAG_OPTION_STOPS_PARSING);
+	
+	// Partially shared options
+	textDelimiterOption = args_createOption('D', "delimiter",
+											"Uses the given text as the delimiter in listings. (Defaults: \" - \" for generic listings, \";\" for selective ones)",
+											FLAG_OPTION_HAS_VALUE);
+	
+	// Root's options
 	buildInfoOption = args_createOption('b', "build-info", "Shows the building info for this program and exit",
 										FLAG_OPTION_STOPS_PARSING);
 	versionInfoOption = args_createOption('v', "version", "Shows the program's version and exit",
@@ -21,11 +48,34 @@ bool prepareLaunchArguments() {
 	versionOnlyInfoOption = args_createOption('V', "version-only",
 											  "Shows the program's version in a basic numeric format and exit",
 											  FLAG_OPTION_STOPS_PARSING);
-	helpOption = args_createOption('h', "help", "Shows this help text and exit", FLAG_OPTION_STOPS_PARSING);
+	
+	// Tier-1 "iface" verb.
+	ifaceRootVerb = args_createVerb("iface", "Test 123");
+	ifaceListVerb = args_createVerb("list", "Reeeee !");
+	
+	ifaceListShowAllOption = args_createOption('a', "all", "Shows all the possible fields.", FLAG_OPTION_NONE);
+	ifaceListShowIndexOption = args_createOption('i', "index", "Shows the interface's GUID.", FLAG_OPTION_NONE);
+	ifaceListShowGuidOption = args_createOption('g', "guid", "Shows the interface's index during the listing.",
+												FLAG_OPTION_NONE);
+	ifaceListShowDescriptionOption = args_createOption('d', "description", "Shows the interface's description.",
+													   FLAG_OPTION_NONE);
+	ifaceListShowStateOption = args_createOption('s', "state", "Shows the interface's state.",
+												 FLAG_OPTION_NONE);
+	ifaceListShowFormattedStateOption = args_createOption('S', "state-text",
+														  "Shows the interface's state in a readable format.",
+														  FLAG_OPTION_NONE);
 	
 	return rootVerb != NULL && helpOption != NULL && args_registerOption(buildInfoOption, rootVerb) &&
 		   args_registerOption(versionInfoOption, rootVerb) && args_registerOption(versionOnlyInfoOption, rootVerb) &&
-		   args_registerOption(helpOption, rootVerb);
+		   args_registerOption(helpOption, rootVerb) && args_registerVerb(ifaceRootVerb, rootVerb) &&
+		   args_registerVerb(ifaceListVerb, ifaceRootVerb) &&
+		   args_registerOption(ifaceListShowAllOption, ifaceListVerb) &&
+		   args_registerOption(ifaceListShowIndexOption, ifaceListVerb) &&
+		   args_registerOption(ifaceListShowGuidOption, ifaceListVerb) &&
+		   args_registerOption(ifaceListShowDescriptionOption, ifaceListVerb) &&
+		   args_registerOption(ifaceListShowStateOption, ifaceListVerb) &&
+		   args_registerOption(ifaceListShowFormattedStateOption, ifaceListVerb) &&
+		   args_registerOption(textDelimiterOption, ifaceListVerb);
 }
 
 int main(int argc, char **argv) {
@@ -67,7 +117,7 @@ int main(int argc, char **argv) {
 		}
 		return 0;
 	} else {
-		printf("> %s\n", "123");
+		//printf("> %s\n", "123");
 	}
 	
 	trace_println("Getting handle to Windows's Wlan Server...");
@@ -93,7 +143,38 @@ int main(int argc, char **argv) {
 	// We can now process the launch parameters more thoroughly
 	// TODO: This !
 	
-	printf("Hello, World!\n");
+	
+	// I couldn't use a switchcase, and I haven't implemented the "extra-data" parameter to the args yet so this will
+	//  have to do, RIP the nice looking code...
+	if(lastUsedVerb == ifaceRootVerb) {
+		// wifi.exe iface [flags...]
+		printf("Hello, World! 123\n");
+		
+	} else if(lastUsedVerb == ifaceListVerb) {
+		// Preparing formatting info structure.
+		// TODO: Optimize this piece of shit with binary flags or something.
+		WifiInterfaceListingParameters formattingParams;
+		formattingParams.showIndex =
+				ifaceListShowIndexOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
+		formattingParams.showGuid = ifaceListShowGuidOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
+		formattingParams.showDescription =
+				ifaceListShowDescriptionOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
+		formattingParams.showState =
+				ifaceListShowStateOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
+		formattingParams.showStateText =
+				ifaceListShowFormattedStateOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
+		formattingParams.doDefault =
+				!formattingParams.showIndex && !formattingParams.showGuid && !formattingParams.showDescription &&
+				!formattingParams.showState && !formattingParams.showStateText;
+		formattingParams.separator = copyString(
+				textDelimiterOption->occurrences > 0 ? dllist_selectFirstData(textDelimiterOption->arguments) :
+				formattingParams.doDefault ? " - " : ";");
+		
+		wifi_handler_ifaceListing(hWlanClient, formattingParams);
+		
+		free(formattingParams.separator);
+	}
+	//printf("Hello, World!\n");
 	
 	
 	
