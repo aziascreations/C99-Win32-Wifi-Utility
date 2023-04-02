@@ -10,6 +10,7 @@
 #include "../../libs/nibblepoker-c-goodies/src/debug.h"
 #include "../../libs/nibblepoker-c-goodies/src/text.h"
 
+#include "./exitCodes.h"
 #include "./handlers/iface.h"
 
 static Verb *rootVerb, *ifaceRootVerb, *ifaceListVerb;
@@ -53,7 +54,8 @@ bool prepareLaunchArguments() {
 	ifaceRootVerb = args_createVerb("iface", "Test 123");
 	ifaceListVerb = args_createVerb("list", "Reeeee !");
 	
-	ifaceListShowAllOption = args_createOption('a', "all", "Shows all the possible fields.", FLAG_OPTION_NONE);
+	ifaceListShowAllOption = args_createOption('a', "all", "Shows all the possible fields.  (Same as -igds)",
+											   FLAG_OPTION_NONE);
 	ifaceListShowIndexOption = args_createOption('i', "index", "Shows the interface's GUID.", FLAG_OPTION_NONE);
 	ifaceListShowGuidOption = args_createOption('g', "guid", "Shows the interface's index during the listing.",
 												FLAG_OPTION_NONE);
@@ -66,8 +68,10 @@ bool prepareLaunchArguments() {
 														  FLAG_OPTION_NONE);
 	
 	return rootVerb != NULL && helpOption != NULL && args_registerOption(buildInfoOption, rootVerb) &&
-		   args_registerOption(versionInfoOption, rootVerb) && args_registerOption(versionOnlyInfoOption, rootVerb) &&
-		   args_registerOption(helpOption, rootVerb) && args_registerVerb(ifaceRootVerb, rootVerb) &&
+		   args_registerOption(versionInfoOption, rootVerb) &&
+		   args_registerOption(versionOnlyInfoOption, rootVerb) &&
+		   args_registerOption(helpOption, rootVerb) &&
+		   args_registerVerb(ifaceRootVerb, rootVerb) &&
 		   args_registerVerb(ifaceListVerb, ifaceRootVerb) &&
 		   args_registerOption(ifaceListShowAllOption, ifaceListVerb) &&
 		   args_registerOption(ifaceListShowIndexOption, ifaceListVerb) &&
@@ -81,7 +85,7 @@ bool prepareLaunchArguments() {
 int main(int argc, char **argv) {
 	// ???
 	// A pointer to this value will be passed around to make it easier to show error codes later on.
-	int errorCode = 0;
+	enum wifi_exit_codes errorCode = WIFI_EXIT_CODE_NO_ERROR;
 	
 	// We prepare and attempt to parse the launch arguments.
 	Verb *lastUsedVerb = NULL;
@@ -91,7 +95,11 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	if(argc > 1) {
-		args_parseArguments(rootVerb, argv, 1, argc, &lastUsedVerb);
+		enum EArgumentParserErrors parserError = args_parseArguments(rootVerb, argv, 1, argc, &lastUsedVerb);
+		if(parserError != ERROR_ARGUMENTS_NONE) {
+			fprintf(stderr, "Unable to parse launch arguments !  (Error #%d) \n", parserError);
+			return parserError;
+		}
 	}
 	
 	// Interpreting potentially exiting launch arguments.
@@ -100,7 +108,7 @@ int main(int argc, char **argv) {
 		
 		// TODO args_printHelpText(lastUsedVerb);
 		
-		return 0;
+		return WIFI_EXIT_CODE_NO_ERROR;
 	}
 	
 	if(lastUsedVerb == rootVerb) {
@@ -115,7 +123,7 @@ int main(int argc, char **argv) {
 		} else {
 			printf("Usage: ...");
 		}
-		return 0;
+		return WIFI_EXIT_CODE_NO_ERROR;
 	} else {
 		//printf("> %s\n", "123");
 	}

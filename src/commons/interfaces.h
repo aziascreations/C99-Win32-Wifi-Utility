@@ -16,3 +16,5 @@
  * @return
  */
 DWORD wifi_iface_iterateAll(HANDLE hClient, void (*callback)(int ifaceIndex, PWLAN_INTERFACE_INFO pIfInfo, void *extraCbData), void *extraCbData);
+
+PWCHAR wifi_iface_formatState(WLAN_INTERFACE_STATE isState);

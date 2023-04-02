@@ -50,7 +50,7 @@ void cb_listInterface(int ifaceIndex, PWLAN_INTERFACE_INFO pIfInfo, void *extraC
 				wprintf(L"%hs%d", hasPrintedSomethingYet ? params->separator : "", pIfInfo->isState);
 				hasPrintedSomethingYet = true;
 			} else if(params->showStateText) {
-				// TODO: Add a text switch case !
+				wprintf(L"%hs%ws", hasPrintedSomethingYet ? params->separator : "", wifi_iface_formatState(pIfInfo->isState));
 			}
 			
 			printf("\n");
