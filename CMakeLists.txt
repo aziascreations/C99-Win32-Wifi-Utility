@@ -151,10 +151,17 @@ add_compile_definitions(NP_BUILD_GENERAL_PROJECT_NAME="$ENV{NP_BUILD_GENERAL_PRO
 # TODO: Set MSVC version !
 
 # Preparing targets
-file(GLOB_RECURSE src_nibblepoker_c_goodies CONFIGURE_DEPENDS "libs/nibblepoker-c-goodies/src/*.h" "libs/nibblepoker-c-goodies/src/*.c" rsc/rc/lscom-cli.rc)
+file(GLOB_RECURSE src_nibblepoker_c_goodies CONFIGURE_DEPENDS "libs/nibblepoker-c-goodies/src/*.h" "libs/nibblepoker-c-goodies/src/*.c")
+file(GLOB_RECURSE src_wifi_commons CONFIGURE_DEPENDS "src/commons/*.h" "src/commons/*.c")
 
-add_executable(wifi src/cli/main.c ${src_nibblepoker_c_goodies})
-target_link_libraries(wifi Wlanapi.lib)
+add_executable(wifi_cli src/cli/main.c ${src_nibblepoker_c_goodies} ${src_wifi_commons} rsc/rc/wifi-cli.rc)
+set_target_properties(wifi_cli PROPERTIES OUTPUT_NAME "wifi")
+target_link_libraries(wifi_cli Wlanapi.lib)
+
+add_executable(wifi_gui src/gui/main.c ${src_nibblepoker_c_goodies} ${src_wifi_commons} rsc/rc/wifi-gui.rc)
+set_target_properties(wifi_gui PROPERTIES OUTPUT_NAME "Wi-Fi Toolbox")
+target_link_libraries(wifi_gui Wlanapi.lib)
+
 
 #target_compile_definitions(wifi PUBLIC NP_DEBUG_LOGGING)
 

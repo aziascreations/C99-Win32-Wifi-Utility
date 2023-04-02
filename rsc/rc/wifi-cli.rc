@@ -53,12 +53,12 @@ FILETYPE VFT_APP
       VALUE "CompanyName", "NibblePoker\0"
       VALUE "FileDescription", "Command line based COM port lister\0"
       VALUE "FileVersion",  NP_BUILD_WIFI_CLI_VERSION_MAJOR "." NP_BUILD_WIFI_CLI_VERSION_MINOR "." NP_BUILD_WIFI_CLI_VERSION_PATCH "." NP_BUILD_WIFI_CLI_VERSION_EXTRA "\0"
-      VALUE "InternalName", "lscom\0"
+      VALUE "InternalName", "wifi-cli\0"
       VALUE "LegalCopyright", "Not defined yet !\0"
       VALUE "LegalTrademarks1", "\0"
       VALUE "LegalTrademarks2", "\0"
-      VALUE "OriginalFilename", "lscom.exe\0"
-      VALUE "ProductName", "NibblePoker's ListComPort\0"
+      VALUE "OriginalFilename", "wifi.exe\0"
+      VALUE "ProductName", "NibblePoker's CLI Wi-Fi Toolbox\0"
       VALUE "ProductVersion", "0.0.0\0"
     }
   }
