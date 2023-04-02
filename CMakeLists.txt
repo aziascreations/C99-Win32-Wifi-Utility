@@ -88,7 +88,8 @@ elseif (MSVC)
     # See:
     #  * https://learn.microsoft.com/en-us/cpp/build/reference/subsystem-specify-subsystem?view=msvc-170
     #  * https://learn.microsoft.com/en-us/cpp/build/reference/release-set-the-checksum?view=msvc-170
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /RELEASE /SUBSYSTEM:CONSOLE")
+    # Check the per-target properties for the /SUBSYSTEM option.
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /RELEASE")
 
     # The /STUB:<filename> could be fun to play around with
     # https://learn.microsoft.com/en-us/cpp/build/reference/stub-ms-dos-stub-file-name?view=msvc-170
@@ -156,10 +157,13 @@ file(GLOB_RECURSE src_wifi_commons CONFIGURE_DEPENDS "src/commons/*.h" "src/comm
 
 add_executable(wifi_cli src/cli/main.c ${src_nibblepoker_c_goodies} ${src_wifi_commons} rsc/rc/wifi-cli.rc)
 set_target_properties(wifi_cli PROPERTIES OUTPUT_NAME "wifi")
+set_target_properties(wifi_cli PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:CONSOLE")
 target_link_libraries(wifi_cli Wlanapi.lib)
 
 add_executable(wifi_gui src/gui/main.c ${src_nibblepoker_c_goodies} ${src_wifi_commons} rsc/rc/wifi-gui.rc)
 set_target_properties(wifi_gui PROPERTIES OUTPUT_NAME "Wi-Fi Toolbox")
+#set_target_properties(wifi_gui PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:WinMainCRTStartup /SUBSYSTEM:WINDOWS")
+set_target_properties(wifi_gui PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:wWinMainCRTStartup /SUBSYSTEM:WINDOWS")
 target_link_libraries(wifi_gui Wlanapi.lib)
 
 
