@@ -34,17 +34,10 @@ bool wifi_handler_getGuidFromListing(HANDLE hWlanClient, GUID *pOutputGuid, char
 	guidGetterParams.wasFound = false;
 	guidGetterParams.pOutputGuid = pOutputGuid;
 	if(desiredGuid != NULL) {
-		// We need to convert the string for later.
-		// We could have used GUIDFromString, but it isn't included in any header for some reason.
-		
-		size_t guidStringSize = strlen(desiredGuid) + 1;
-		guidGetterParams.desiredGuid = (wchar_t *) malloc(sizeof(wchar_t) * guidStringSize);
-		size_t outSize;
-		
-		errno_t strCpyErr = mbstowcs_s(&outSize, guidGetterParams.desiredGuid, guidStringSize, desiredGuid, guidStringSize - 1);
-		if(strCpyErr != 0) {
-			fprintf(stderr, "Unable to convert the desired GUID's string !  (Error #%d)\n", strCpyErr);
-			free(guidGetterParams.desiredGuid);
+		// We need to convert the string for the comparison later.
+		guidGetterParams.desiredGuid = charStringToWChar(desiredGuid);
+		if(guidGetterParams.desiredGuid == NULL) {
+			fprintf(stderr, "Unable to convert the desired GUID's string !  (Error #%d)\n", errno);
 			return false;
 		}
 		

@@ -166,9 +166,8 @@ int main(int argc, char **argv) {
 	// Assuming we didn't jump to the end.
 	// We can now process the launch parameters more thoroughly.
 	
-	// If the '' option was used, it means it will be required later on, so we need to verify it now.
+	// If the '-G|--guid' option was used, it means it will be required later on, so we need to verify it now.
 	// If the option was required but not given, the parsing process will fail earlier and this code won't be reached.
-	// TODO: This !
 	GUID ifaceGuid;
 	if(args_wasOptionUsed(ifaceGuidOption)) {
 		trace_println("We need to verify the iface GUID !");
