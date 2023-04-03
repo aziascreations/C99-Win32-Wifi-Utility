@@ -1,6 +1,6 @@
 #include "interfaces.h"
 
-DWORD wifi_iface_iterateAll(HANDLE hClient, void (*callback)(int ifaceIndex, PWLAN_INTERFACE_INFO pIfInfo, void *extraCbData), void *extraCbData) {
+DWORD wifi_iface_iterateAll(HANDLE hClient, bool (*callback)(int ifaceIndex, PWLAN_INTERFACE_INFO pIfInfo, void *extraCbData), void *extraCbData) {
 	// Making sure we can properly and safely go forward.
 	if(hClient == NULL || callback == NULL) {
 		error_println("One of the parameters was NULL !  (hClient: %p, callback: %p)", hClient, callback);
@@ -14,7 +14,11 @@ DWORD wifi_iface_iterateAll(HANDLE hClient, void (*callback)(int ifaceIndex, PWL
 	dwResult = WlanEnumInterfaces(hClient, NULL, &pIfList);
 	if(dwResult == ERROR_SUCCESS) {
 		for(int i = 0; i < (int) pIfList->dwNumberOfItems; i++) {
-			callback(i, (WLAN_INTERFACE_INFO *) &pIfList->InterfaceInfo[i], extraCbData);
+			if(!callback(i, (WLAN_INTERFACE_INFO *) &pIfList->InterfaceInfo[i], extraCbData)) {
+				// If the callback tells us to stop iterating, we do.
+				// The condition is more like `if(!shouldContinue)`, but its the same...
+				i = (int) pIfList->dwNumberOfItems;
+			}
 		}
 		
 		// FIXME: Is this condition required since we check for errors ?

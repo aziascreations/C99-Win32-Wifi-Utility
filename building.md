@@ -48,3 +48,10 @@ Now your executables should be located in one of the following folders:
 * [build/Release](build/Release)
 * [build/RelWithDebInfo](build/RelWithDebInfo)
 * [build/MinSizeRel](build/MinSizeRel)
+
+## Updating repository
+If you need to update the repository, you can just run the following commands:
+```bash
+git pull
+git submodule foreach git pull
+```

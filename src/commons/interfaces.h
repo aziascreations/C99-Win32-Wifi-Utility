@@ -9,7 +9,7 @@
 #include "../../libs/nibblepoker-c-goodies/src/debug.h"
 #include "../../libs/nibblepoker-c-goodies/src/text.h"
 
-#define isInterfaceGuid(potentialGuid) stringStartsWith(potentialGuid, "{");
+#define isInterfaceGuid(potentialGuid) stringStartsWith(potentialGuid, "{")
 
 /**
  * Loops over all available Wi-Fi interfaces and calls a given callback for each.
@@ -18,6 +18,6 @@
  * @param callback
  * @return
  */
-DWORD wifi_iface_iterateAll(HANDLE hClient, void (*callback)(int ifaceIndex, PWLAN_INTERFACE_INFO pIfInfo, void *extraCbData), void *extraCbData);
+DWORD wifi_iface_iterateAll(HANDLE hClient, bool (*callback)(int ifaceIndex, PWLAN_INTERFACE_INFO pIfInfo, void *extraCbData), void *extraCbData);
 
 PWCHAR wifi_iface_formatState(WLAN_INTERFACE_STATE isState);

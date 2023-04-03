@@ -25,7 +25,7 @@ Remarks:
       `{guid}{delimiter}{description}`
   * The other fields will always appear in the following order with the delimiter in between:
       index, guid, description, state
-  * If both '-s' and '-S' are used, '-s' will take precedence over '-S' and the state will be show as a number.
+  * If both '-s' and '-S' are used, '-s' will take precedence over '-S' and the state will be shown as a number.
 ```
 
 ## Building

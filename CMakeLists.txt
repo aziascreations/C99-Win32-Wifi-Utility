@@ -160,14 +160,13 @@ add_executable(wifi_cli src/cli/main.c ${src_nibblepoker_c_goodies} ${src_wifi_c
 set_target_properties(wifi_cli PROPERTIES OUTPUT_NAME "wifi")
 set_target_properties(wifi_cli PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:CONSOLE")
 target_link_libraries(wifi_cli Wlanapi.lib)
+target_compile_definitions(wifi_cli PUBLIC NP_DEBUG_LOGGING)  # Enables debugging and optional error logging.
 
 add_executable(wifi_gui src/gui/main.c ${src_nibblepoker_c_goodies} ${src_wifi_commons} rsc/rc/wifi-gui.rc)
 set_target_properties(wifi_gui PROPERTIES OUTPUT_NAME "Wi-Fi Toolbox")
 set_target_properties(wifi_gui PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:wWinMainCRTStartup /SUBSYSTEM:WINDOWS")
 target_link_libraries(wifi_gui Wlanapi.lib)
 
-
-#target_compile_definitions(wifi PUBLIC NP_DEBUG_LOGGING)
 
 # CLion couldn't give two shits about these and actually have them work out of the box, how lovely...
 #add_custom_target(run-version COMMAND wifi --build-info COMMENT "Show the version text" DEPENDS wifi)

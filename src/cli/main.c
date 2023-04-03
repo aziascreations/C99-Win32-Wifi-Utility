@@ -13,13 +13,13 @@
 #include "./exitCodes.h"
 #include "./handlers/iface.h"
 
-static Verb *rootVerb, *ifaceRootVerb, *ifaceListVerb;
+static Verb *rootVerb, *ifaceRootVerb, *ifaceListVerb, *ifaceProfileVerb;
 
 // Recursively shared options
 static Option *helpOption;
 
 // Partially shared options
-static Option *textDelimiterOption;
+static Option *textDelimiterOption, *ifaceGuidOption;
 
 // Root's options
 static Option *buildInfoOption, *versionInfoOption, *versionOnlyInfoOption;
@@ -42,6 +42,10 @@ bool prepareLaunchArguments() {
 			'D', "delimiter",
 			"Uses the given text as the delimiter in listings. (Defaults: \" - \" for generic listings, \";\" for selective ones)",
 			FLAG_OPTION_HAS_VALUE);
+	ifaceGuidOption = args_createOption(
+			'G', "guid",
+			"GUID associated with the Wi-Fi interface that is being interacted with.  (Can be given as the internal listing index)",
+			FLAG_OPTION_HAS_VALUE | FLAG_OPTION_DEFAULT | FLAG_OPTION_REQUIRED);
 	
 	// Root's options
 	buildInfoOption = args_createOption(
@@ -54,7 +58,8 @@ bool prepareLaunchArguments() {
 	
 	// Tier-1 "iface" verb.
 	ifaceRootVerb = args_createVerb("iface", "Test 123");
-	ifaceListVerb = args_createVerb("list", "Reeeee !");
+	ifaceListVerb = args_createVerb("list", "Lists the interface in a human or machine readable format.");
+	ifaceProfileVerb = args_createVerb("profile", "Interacts with the profiles associated with an interface.");
 	
 	ifaceListShowAllOption = args_createOption(
 			'a', "show-all", "Shows all the possible fields.  (Same as -igds)", FLAG_OPTION_NONE);
@@ -81,7 +86,18 @@ bool prepareLaunchArguments() {
 		   args_registerOption(ifaceListShowDescriptionOption, ifaceListVerb) &&
 		   args_registerOption(ifaceListShowStateOption, ifaceListVerb) &&
 		   args_registerOption(ifaceListShowFormattedStateOption, ifaceListVerb) &&
-		   args_registerOption(textDelimiterOption, ifaceListVerb);
+		   args_registerOption(textDelimiterOption, ifaceListVerb) &&
+		   args_registerVerb(ifaceProfileVerb, ifaceRootVerb) &&
+		   args_registerOption(ifaceGuidOption, ifaceProfileVerb);
+}
+
+/**
+ * Check if the application was ran through double-clicking it or via a command prompt.
+ * @return `true` if was ran through double-clicking, `false` otherwise.
+ */
+bool isProgramRunDirectly() {
+	DWORD dwProcessList;
+	return GetConsoleProcessList(&dwProcessList, 2) <= 1;
 }
 
 int main(int argc, char **argv) {
@@ -105,12 +121,12 @@ int main(int argc, char **argv) {
 	}
 	
 	// Interpreting potentially exiting launch arguments.
-	if(helpOption->occurrences) {
+	if(argc <= 1 || helpOption->occurrences) {
 		printf("We should print the help text !\n");
 		
 		// TODO args_printHelpText(lastUsedVerb);
 		
-		return WIFI_EXIT_CODE_NO_ERROR;
+		goto END_CLEAN_ROOT_VERB;
 	}
 	
 	if(lastUsedVerb == rootVerb) {
@@ -126,8 +142,6 @@ int main(int argc, char **argv) {
 			printf("Usage: ...");
 		}
 		return WIFI_EXIT_CODE_NO_ERROR;
-	} else {
-		//printf("> %s\n", "123");
 	}
 	
 	trace_println("Getting handle to Windows's Wlan Server...");
@@ -151,6 +165,51 @@ int main(int argc, char **argv) {
 	
 	// Assuming we didn't jump to the end.
 	// We can now process the launch parameters more thoroughly.
+	
+	// If the '' option was used, it means it will be required later on, so we need to verify it now.
+	// If the option was required but not given, the parsing process will fail earlier and this code won't be reached.
+	// TODO: This !
+	GUID ifaceGuid;
+	if(args_wasOptionUsed(ifaceGuidOption)) {
+		trace_println("We need to verify the iface GUID !");
+		trace_println("> [%lu, %hu, %hu, [%d, %d, %d, %d, %d, %d, %d, %d]]", ifaceGuid.Data1, ifaceGuid.Data2,
+					  ifaceGuid.Data3, ifaceGuid.Data4[0], ifaceGuid.Data4[1], ifaceGuid.Data4[2], ifaceGuid.Data4[3],
+					  ifaceGuid.Data4[4], ifaceGuid.Data4[5], ifaceGuid.Data4[6], ifaceGuid.Data4[7]);
+		
+		if(!isInterfaceGuid(ifaceGuidOption->arguments->first->data)) {
+			trace_println("We have the index");
+			
+			errno = 0;
+			char *nbrConversionTmp;
+			int desiredIndex = strtol(ifaceGuidOption->arguments->first->data, &nbrConversionTmp, 10);
+			
+			if(nbrConversionTmp == ifaceGuidOption->arguments->first->data || *nbrConversionTmp != '\0' ||
+			   ((desiredIndex == LONG_MIN || desiredIndex == LONG_MAX) && errno == ERANGE)) {
+				fprintf(stderr, "Unable to convert the given index into a valid number !\n");
+				errorCode = 97;
+				goto END_CLOSE_WLAN_HANDLE;
+			}
+			
+			trace_println("> %d", desiredIndex);
+			
+			if(!wifi_handler_getGuidFromIndex(hWlanClient, &ifaceGuid, desiredIndex)) {
+				fprintf(stderr, "Unable to find an interface with the given index !\n");
+				errorCode = 98;
+				goto END_CLOSE_WLAN_HANDLE;
+			}
+		} else {
+			trace_println("We have the text-based GUID");
+			if(!wifi_handler_getGuidFromGuid(hWlanClient, &ifaceGuid, ifaceGuidOption->arguments->first->data)) {
+				fprintf(stderr, "Unable to find an interface with the given GUID !\n");
+				errorCode = 99;
+				goto END_CLOSE_WLAN_HANDLE;
+			}
+		}
+		
+		trace_println("> [%lu, %hu, %hu, [%d, %d, %d, %d, %d, %d, %d, %d]]", ifaceGuid.Data1, ifaceGuid.Data2,
+					  ifaceGuid.Data3, ifaceGuid.Data4[0], ifaceGuid.Data4[1], ifaceGuid.Data4[2], ifaceGuid.Data4[3],
+					  ifaceGuid.Data4[4], ifaceGuid.Data4[5], ifaceGuid.Data4[6], ifaceGuid.Data4[7]);
+	}
 	
 	// I couldn't use a switchcase, and I haven't implemented the "extra-data" parameter to the args yet so this will
 	//  have to do, RIP the nice looking code...
@@ -192,6 +251,12 @@ int main(int argc, char **argv) {
 	
 	END_CLEAN_ROOT_VERB:
 	args_freeVerb(rootVerb);
+	
+	// FIXME: Check if it triggers when called from another language or a batch file !
+	if(isProgramRunDirectly()) {
+		printf("Press any key to continue...\n");
+		getchar();
+	}
 	
 	return errorCode;
 }

@@ -22,3 +22,9 @@ struct wifi_cli_iface_formatting_params {
 #define WifiInterfaceListingParameters struct wifi_cli_iface_formatting_params
 
 void wifi_handler_ifaceListing(HANDLE hWlanClient, WifiInterfaceListingParameters params);
+
+#define wifi_handler_getGuidFromGuid(hWlanClient, pOutputGuid, desiredGuid) wifi_handler_getGuidFromListing(hWlanClient, pOutputGuid, desiredGuid, 0)
+
+#define wifi_handler_getGuidFromIndex(hWlanClient, pOutputGuid, index) wifi_handler_getGuidFromListing(hWlanClient, pOutputGuid, NULL, index)
+
+bool wifi_handler_getGuidFromListing(HANDLE hWlanClient, GUID *pOutputGuid, char* desiredGuid, int desiredIndex);
