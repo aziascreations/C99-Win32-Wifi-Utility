@@ -34,38 +34,40 @@ bool prepareLaunchArguments() {
 	
 	// Recursively shared options
 	// TODO: Add a args_registerRecursiveOption !
-	helpOption = args_createOption('h', "help", "Shows this help text and exit", FLAG_OPTION_STOPS_PARSING);
+	helpOption = args_createOption(
+			'h', "help", "Shows this help text and exit.", FLAG_OPTION_STOPS_PARSING);
 	
 	// Partially shared options
-	textDelimiterOption = args_createOption('D', "delimiter",
-											"Uses the given text as the delimiter in listings. (Defaults: \" - \" for generic listings, \";\" for selective ones)",
-											FLAG_OPTION_HAS_VALUE);
+	textDelimiterOption = args_createOption(
+			'D', "delimiter",
+			"Uses the given text as the delimiter in listings. (Defaults: \" - \" for generic listings, \";\" for selective ones)",
+			FLAG_OPTION_HAS_VALUE);
 	
 	// Root's options
-	buildInfoOption = args_createOption('b', "build-info", "Shows the building info for this program and exit",
-										FLAG_OPTION_STOPS_PARSING);
-	versionInfoOption = args_createOption('v', "version", "Shows the program's version and exit",
-										  FLAG_OPTION_STOPS_PARSING);
-	versionOnlyInfoOption = args_createOption('V', "version-only",
-											  "Shows the program's version in a basic numeric format and exit",
-											  FLAG_OPTION_STOPS_PARSING);
+	buildInfoOption = args_createOption(
+			'b', "build-info", "Shows the building info for this program and exit.", FLAG_OPTION_STOPS_PARSING);
+	versionInfoOption = args_createOption(
+			'v', "version", "Shows the program's version and exit.", FLAG_OPTION_STOPS_PARSING);
+	versionOnlyInfoOption = args_createOption(
+			'V', "version-only", "Shows the program's version in a basic numeric format and exit.",
+			FLAG_OPTION_STOPS_PARSING);
 	
 	// Tier-1 "iface" verb.
 	ifaceRootVerb = args_createVerb("iface", "Test 123");
 	ifaceListVerb = args_createVerb("list", "Reeeee !");
 	
-	ifaceListShowAllOption = args_createOption('a', "all", "Shows all the possible fields.  (Same as -igds)",
-											   FLAG_OPTION_NONE);
-	ifaceListShowIndexOption = args_createOption('i', "index", "Shows the interface's GUID.", FLAG_OPTION_NONE);
-	ifaceListShowGuidOption = args_createOption('g', "guid", "Shows the interface's index during the listing.",
-												FLAG_OPTION_NONE);
-	ifaceListShowDescriptionOption = args_createOption('d', "description", "Shows the interface's description.",
-													   FLAG_OPTION_NONE);
-	ifaceListShowStateOption = args_createOption('s', "state", "Shows the interface's state.",
-												 FLAG_OPTION_NONE);
-	ifaceListShowFormattedStateOption = args_createOption('S', "state-text",
-														  "Shows the interface's state in a readable format.",
-														  FLAG_OPTION_NONE);
+	ifaceListShowAllOption = args_createOption(
+			'a', "show-all", "Shows all the possible fields.  (Same as -igds)", FLAG_OPTION_NONE);
+	ifaceListShowIndexOption = args_createOption(
+			'i', "show-index", "Shows the interface's GUID.", FLAG_OPTION_NONE);
+	ifaceListShowGuidOption = args_createOption(
+			'g', "show-guid", "Shows the interface's index during the listing.", FLAG_OPTION_NONE);
+	ifaceListShowDescriptionOption = args_createOption(
+			'd', "show-description", "Shows the interface's description.", FLAG_OPTION_NONE);
+	ifaceListShowStateOption = args_createOption(
+			's', "show-state", "Shows the interface's state.", FLAG_OPTION_NONE);
+	ifaceListShowFormattedStateOption = args_createOption(
+			'S', "show-state-text", "Shows the interface's state in a readable format.", FLAG_OPTION_NONE);
 	
 	return rootVerb != NULL && helpOption != NULL && args_registerOption(buildInfoOption, rootVerb) &&
 		   args_registerOption(versionInfoOption, rootVerb) &&
@@ -148,9 +150,7 @@ int main(int argc, char **argv) {
 	}
 	
 	// Assuming we didn't jump to the end.
-	// We can now process the launch parameters more thoroughly
-	// TODO: This !
-	
+	// We can now process the launch parameters more thoroughly.
 	
 	// I couldn't use a switchcase, and I haven't implemented the "extra-data" parameter to the args yet so this will
 	//  have to do, RIP the nice looking code...
@@ -160,11 +160,12 @@ int main(int argc, char **argv) {
 		
 	} else if(lastUsedVerb == ifaceListVerb) {
 		// Preparing formatting info structure.
-		// TODO: Optimize this piece of shit with binary flags or something.
+		// TODO: Optimize this piece of shit with binary flags or something. - Is it really worth it tho ?
 		WifiInterfaceListingParameters formattingParams;
 		formattingParams.showIndex =
 				ifaceListShowIndexOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
-		formattingParams.showGuid = ifaceListShowGuidOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
+		formattingParams.showGuid =
+				ifaceListShowGuidOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
 		formattingParams.showDescription =
 				ifaceListShowDescriptionOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
 		formattingParams.showState =
@@ -182,9 +183,6 @@ int main(int argc, char **argv) {
 		
 		free(formattingParams.separator);
 	}
-	//printf("Hello, World!\n");
-	
-	
 	
 	// Exiting procedure
 	// The order is important here in order to make it simple to quit the app with "goto"s
