@@ -17,3 +17,5 @@ Debug/
 build/
 venv/
 *.exe
+
+msi/

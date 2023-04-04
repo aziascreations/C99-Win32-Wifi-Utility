@@ -162,6 +162,9 @@ set_target_properties(wifi_cli PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} 
 target_link_libraries(wifi_cli Wlanapi.lib)
 target_compile_definitions(wifi_cli PUBLIC NP_DEBUG_LOGGING)  # Enables debugging and optional error logging.
 
+# Uncomment this line to disable code page switching and emoji support.
+#target_compile_definitions(wifi_cli PUBLIC NP_WIFI_NO_UTF8_CODE_PAGE)
+
 add_executable(wifi_gui src/gui/main.c ${src_nibblepoker_c_goodies} ${src_wifi_commons} rsc/rc/wifi-gui.rc)
 set_target_properties(wifi_gui PROPERTIES OUTPUT_NAME "Wi-Fi Toolbox")
 set_target_properties(wifi_gui PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:wWinMainCRTStartup /SUBSYSTEM:WINDOWS")

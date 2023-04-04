@@ -22,7 +22,7 @@ bool cb_listProfiles(int profileIndex, WLAN_PROFILE_INFO *pProfileInfo, void *ex
 	WifiInterfaceProfileListingParameters *params = extraCbData;
 	
 	if(params->doDefault) {
-		// TODO: Doesn't print out emojis properly (Also, check the format so it is consistent !!!)
+		// Remark: If emojis aren't printed out properly, you need to use the command `chcp 65001`.
 		wprintf(L"[%d]%hs%Ls%hs%ws\n", profileIndex, params->separator, pProfileInfo->strProfileName,
 				params->separator, wifi_profile_formatInfoFlags(pProfileInfo->dwFlags));
 	} else {
@@ -33,7 +33,7 @@ bool cb_listProfiles(int profileIndex, WLAN_PROFILE_INFO *pProfileInfo, void *ex
 			hasPrintedSomethingYet = true;
 		}
 		if(params->showName) {
-			// TODO: Doesn't print out emojis properly (Also, check the format so it is consistent !!!)
+			// Remark: If emojis aren't printed out properly, you need to use the command `chcp 65001`.
 			wprintf(L"%hs%lls", hasPrintedSomethingYet ? params->separator : "", pProfileInfo->strProfileName);
 			hasPrintedSomethingYet = true;
 		}

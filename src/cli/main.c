@@ -5,6 +5,9 @@
 #include <wlanapi.h>
 #include <objbase.h>
 #include <wtypes.h>
+#ifndef NP_WIFI_NO_UTF8_CODE_PAGE
+#include <locale.h>
+#endif
 
 #include "../../libs/nibblepoker-c-goodies/src/arguments/arguments.h"
 #include "../../libs/nibblepoker-c-goodies/src/debug.h"
@@ -131,6 +134,18 @@ bool isProgramRunDirectly() {
 }
 
 int main(int argc, char **argv) {
+#ifndef NP_WIFI_NO_UTF8_CODE_PAGE
+	// Allows emojis in SSIDs and profiles' names to be properly shown later on.
+	// It also allows the original code page to be restored when exiting.
+	setlocale(LC_ALL, "en_US.UTF-8");
+	
+	UINT originalCodePage = GetConsoleCP();
+	UINT originalOutputCodePage = GetConsoleOutputCP();
+	
+	SetConsoleCP(CP_UTF8);
+	SetConsoleOutputCP(CP_UTF8);
+#endif
+	
 	// ???
 	// A pointer to this value will be passed around to make it easier to show error codes later on.
 	enum wifi_exit_codes errorCode = WIFI_EXIT_CODE_NO_ERROR;
@@ -313,6 +328,11 @@ int main(int argc, char **argv) {
 		printf("Press any key to continue...\n");
 		//getchar();
 	}
+
+#ifndef NP_WIFI_NO_UTF8_CODE_PAGE
+	SetConsoleCP(originalCodePage);
+	SetConsoleOutputCP(originalOutputCodePage);
+#endif
 	
 	return errorCode;
 }
