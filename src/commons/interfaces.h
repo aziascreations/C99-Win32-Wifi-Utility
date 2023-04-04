@@ -16,8 +16,11 @@
  * The data is freed once the function returns, it should be copied properly if needed afterward !
  * @param hClient
  * @param callback
+ * @param extraCbData Extra data passed as-is to the callback.
  * @return
  */
-DWORD wifi_iface_iterateAll(HANDLE hClient, bool (*callback)(int ifaceIndex, PWLAN_INTERFACE_INFO pIfInfo, void *extraCbData), void *extraCbData);
+DWORD wifi_iface_iterateAll(HANDLE hClient,
+							bool (*callback)(int ifaceIndex, PWLAN_INTERFACE_INFO pIfInfo, void *extraCbData),
+							void *extraCbData);
 
 PWCHAR wifi_iface_formatState(WLAN_INTERFACE_STATE isState);

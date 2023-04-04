@@ -10,12 +10,12 @@
 #include "../../commons/interfaces.h"
 
 struct wifi_cli_iface_formatting_params {
-	/** If set to `true`, only show the default human readable formatting and ignore other variables. */
 	bool showIndex;
 	bool showGuid;
 	bool showDescription;
 	bool showState;
 	bool showStateText;
+	/** If set to `true`, only show the default human readable formatting and ignore other variables. */
 	bool doDefault;
 	char *separator;
 };

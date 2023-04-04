@@ -21,7 +21,7 @@ DWORD wifi_iface_iterateAll(HANDLE hClient, bool (*callback)(int ifaceIndex, PWL
 			}
 		}
 		
-		// FIXME: Is this condition required since we check for errors ?
+		// TODO: Is this condition required since we check for errors ?
 		if(pIfList != NULL) {
 			WlanFreeMemory(pIfList);
 		}

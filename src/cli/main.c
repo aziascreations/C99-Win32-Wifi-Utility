@@ -12,8 +12,9 @@
 
 #include "./exitCodes.h"
 #include "./handlers/iface.h"
+#include "./handlers/profile.h"
 
-static Verb *rootVerb, *ifaceRootVerb, *ifacesRootVerb, *ifacesListVerb, *ifaceProfileVerb;
+static Verb *rootVerb, *ifaceRootVerb, *ifacesRootVerb, *ifacesListVerb, *ifaceProfilesVerb, *ifaceProfilesListVerb;
 
 // Recursively shared options
 static Option *helpOption;
@@ -46,7 +47,7 @@ bool prepareLaunchArguments() {
 	ifaceGuidOption = args_createOption(
 			'G', "guid",
 			"GUID associated with the Wi-Fi interface that is being interacted with.  (Can be given as the internal listing index)",
-			FLAG_OPTION_HAS_VALUE | FLAG_OPTION_DEFAULT | FLAG_OPTION_REQUIRED);
+			FLAG_OPTION_HAS_VALUE | FLAG_OPTION_DEFAULT | FLAG_OPTION_REQUIRED | FLAG_OPTION_ALLOW_VERBS_AFTER);
 	
 	// Root's options
 	buildInfoOption = args_createOption(
@@ -57,17 +58,22 @@ bool prepareLaunchArguments() {
 			'V', "version-only", "Shows the program's version in a basic numeric format and exit.",
 			FLAG_OPTION_STOPS_PARSING);
 	
-	// Tier-1 "iface" verb.
+	// "iface" and "ifaces" verb and sub-verbs.
 	ifacesRootVerb = args_createVerb("ifaces", "Operations that affect all interfaces.");
 	ifacesListVerb = args_createVerb("list", "Lists the interface in a human or machine readable format.");
+	
 	ifaceRootVerb = args_createVerb("iface", "Operations that affect a specific interface.");
-	ifaceProfileVerb = args_createVerb("profile", "Interacts with the profiles associated with an interface.");
+	ifaceProfilesVerb = args_createVerb("profiles", "Interacts with all the profiles associated with an interface.");
+	ifaceProfilesListVerb = args_createVerb("list", "Lists the interface in a human or machine readable format.");
 	// TODO: Add "profiles" to handle all with additional parameters shared with "iface list" 's ones.
 	
+	// Somewhat shared
 	ifaceListShowAllOption = args_createOption(
-			'a', "show-all", "Shows all the possible fields.  (Same as -igds)", FLAG_OPTION_NONE);
+			'a', "show-all", "Shows all the possible fields.", FLAG_OPTION_NONE);
 	ifaceListShowIndexOption = args_createOption(
 			'i', "show-index", "Shows the interface's GUID.", FLAG_OPTION_NONE);
+	
+	// ifaces only
 	ifaceListShowGuidOption = args_createOption(
 			'g', "show-guid", "Shows the interface's index during the listing.", FLAG_OPTION_NONE);
 	ifaceListShowDescriptionOption = args_createOption(
@@ -77,17 +83,15 @@ bool prepareLaunchArguments() {
 	ifaceListShowFormattedStateOption = args_createOption(
 			'S', "show-state-text", "Shows the interface's state in a readable format.", FLAG_OPTION_NONE);
 	
-	/*ifaceProfileShowNameOption = args_createOption(
-			'n', "show-name", "Shows the profile info's name.", FLAG_OPTION_NONE);
-	// TODO: Check if it can have some control chars like SSIDs, don't be like wmic once it encounters emojis.
-	//ifaceProfileShowNameOption = args_createOption(
-	//		'N', "show-name-hex", "Shows the profile info's name.", FLAG_OPTION_NONE);
+	// profiles only
 	ifaceProfileShowFlagsOption = args_createOption(
 			'f', "show-flags", "Shows the profile info's flags.  (As an unsigned 32bit integer)", FLAG_OPTION_NONE);
 	ifaceProfileShowFormattedFlagsOption = args_createOption(
-			'F', "show-flags-text", "Shows the profile info's flags in a readable format.", FLAG_OPTION_NONE);*/
+			'F', "show-flags-text", "Shows the profile info's flags in a readable format.", FLAG_OPTION_NONE);
+	ifaceProfileShowNameOption = args_createOption(
+			'n', "show-name", "Shows the profile info's name.", FLAG_OPTION_NONE);
 	
-	return rootVerb != NULL && helpOption != NULL &&args_registerOption(buildInfoOption, rootVerb) &&
+	return rootVerb != NULL && helpOption != NULL && args_registerOption(buildInfoOption, rootVerb) &&
 		   args_registerOption(versionInfoOption, rootVerb) &&
 		   args_registerOption(versionOnlyInfoOption, rootVerb) &&
 		   args_registerOption(helpOption, rootVerb) &&
@@ -104,9 +108,17 @@ bool prepareLaunchArguments() {
 		   args_registerOption(textDelimiterOption, ifacesListVerb) &&
 		   // wifi iface <GUID/Index> [...]
 		   args_registerVerb(ifaceRootVerb, rootVerb) &&
-		   args_registerOption(ifaceGuidOption, ifaceProfileVerb) &&
-		   // wifi iface <GUID/Index> profile [...]
-		   args_registerVerb(ifaceProfileVerb, ifaceRootVerb);
+		   args_registerOption(ifaceGuidOption, ifaceRootVerb) &&
+		   // wifi iface <GUID/Index> profiles [...]
+		   args_registerVerb(ifaceProfilesVerb, ifaceRootVerb) &&
+		   // wifi iface <GUID/Index> profiles list [...]
+		   args_registerVerb(ifaceProfilesListVerb, ifaceProfilesVerb) &&
+		   args_registerOption(ifaceListShowAllOption, ifaceProfilesListVerb) &&
+		   args_registerOption(textDelimiterOption, ifaceProfilesListVerb) &&
+		   args_registerOption(ifaceProfileShowFlagsOption, ifaceProfilesListVerb) &&
+		   args_registerOption(ifaceProfileShowFormattedFlagsOption, ifaceProfilesListVerb) &&
+		   args_registerOption(ifaceListShowIndexOption, ifaceProfilesListVerb) &&
+		   args_registerOption(ifaceProfileShowNameOption, ifaceProfilesListVerb);
 }
 
 /**
@@ -134,8 +146,11 @@ int main(int argc, char **argv) {
 		enum EArgumentParserErrors parserError = args_parseArguments(rootVerb, argv, 1, argc, &lastUsedVerb);
 		if(parserError != ERROR_ARGUMENTS_NONE) {
 			fprintf(stderr, "Unable to parse launch arguments !  (Error #%d) \n", parserError);
-			return parserError;
+			errorCode = (enum wifi_exit_codes) parserError;
+			goto END_CLEAN_ROOT_VERB;
 		}
+		
+		trace_println("> lastUsedVerb: %s", lastUsedVerb->name);
 	}
 	
 	// Interpreting potentially exiting launch arguments.
@@ -236,7 +251,6 @@ int main(int argc, char **argv) {
 		
 	} else if(lastUsedVerb == ifacesListVerb) {
 		// Preparing formatting info structure.
-		// TODO: Optimize this piece of shit with binary flags or something. - Is it really worth it tho ?
 		WifiInterfaceListingParameters formattingParams;
 		formattingParams.showIndex =
 				ifaceListShowIndexOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
@@ -255,9 +269,34 @@ int main(int argc, char **argv) {
 				textDelimiterOption->occurrences > 0 ? dllist_selectFirstData(textDelimiterOption->arguments) :
 				formattingParams.doDefault ? " - " : ";");
 		
+		trace_println("Calling 'wifi_handler_ifaceListing'...");
 		wifi_handler_ifaceListing(hWlanClient, formattingParams);
 		
 		free(formattingParams.separator);
+	} else if(lastUsedVerb == ifaceProfilesListVerb) {
+		// Preparing formatting info structure.
+		WifiInterfaceProfileListingParameters formattingParams;
+		formattingParams.showIndex =
+				ifaceListShowIndexOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
+		formattingParams.showName =
+				ifaceProfileShowNameOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
+		formattingParams.showFlags =
+				ifaceProfileShowFlagsOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
+		formattingParams.showFlagsText =
+				ifaceProfileShowFormattedFlagsOption->occurrences > 0 || ifaceListShowAllOption->occurrences > 0;
+		formattingParams.doDefault =
+				!formattingParams.showIndex && !formattingParams.showName && !formattingParams.showFlags &&
+				!formattingParams.showFlagsText;
+		formattingParams.separator = copyString(
+				textDelimiterOption->occurrences > 0 ? dllist_selectFirstData(textDelimiterOption->arguments) :
+				formattingParams.doDefault ? " - " : ";");
+		
+		trace_println("Calling 'wifi_handler_ifaceProfilesListing'...");
+		wifi_handler_ifaceProfilesListing(hWlanClient, &ifaceGuid, formattingParams);
+		
+		free(formattingParams.separator);
+	} else {
+		fprintf(stderr, "The requested verb wasn't processed properly !\n");
 	}
 	
 	// Exiting procedure
@@ -272,7 +311,7 @@ int main(int argc, char **argv) {
 	// FIXME: Check if it triggers when called from another language or a batch file !
 	if(isProgramRunDirectly()) {
 		printf("Press any key to continue...\n");
-		getchar();
+		//getchar();
 	}
 	
 	return errorCode;

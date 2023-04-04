@@ -80,7 +80,8 @@ bool cb_listInterface(int ifaceIndex, PWLAN_INTERFACE_INFO pIfInfo, void *extraC
 		fprintf(stderr, "Unable to grab GUID for interface #%d", ifaceIndex);
 	} else {
 		if(params->doDefault) {
-			wprintf(L"%ws%hs%ws\n", GuidString, params->separator, pIfInfo->strInterfaceDescription);
+			wprintf(L"[%d]%hs%ws%hs%ws\n", ifaceIndex, params->separator, GuidString, params->separator,
+					pIfInfo->strInterfaceDescription);
 		} else {
 			bool hasPrintedSomethingYet = false;
 			
