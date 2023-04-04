@@ -13,7 +13,7 @@
 #include "./exitCodes.h"
 #include "./handlers/iface.h"
 
-static Verb *rootVerb, *ifaceRootVerb, *ifaceListVerb, *ifaceProfileVerb;
+static Verb *rootVerb, *ifaceRootVerb, *ifacesRootVerb, *ifacesListVerb, *ifaceProfileVerb;
 
 // Recursively shared options
 static Option *helpOption;
@@ -27,6 +27,7 @@ static Option *buildInfoOption, *versionInfoOption, *versionOnlyInfoOption;
 // Iface listing formatting options
 static Option *ifaceListShowAllOption, *ifaceListShowIndexOption, *ifaceListShowGuidOption, *ifaceListShowDescriptionOption,
 		*ifaceListShowStateOption, *ifaceListShowFormattedStateOption;
+static Option *ifaceProfileShowNameOption, *ifaceProfileShowFlagsOption, *ifaceProfileShowFormattedFlagsOption;
 
 bool prepareLaunchArguments() {
 	// Root verb
@@ -57,9 +58,11 @@ bool prepareLaunchArguments() {
 			FLAG_OPTION_STOPS_PARSING);
 	
 	// Tier-1 "iface" verb.
-	ifaceRootVerb = args_createVerb("iface", "Test 123");
-	ifaceListVerb = args_createVerb("list", "Lists the interface in a human or machine readable format.");
+	ifacesRootVerb = args_createVerb("ifaces", "Operations that affect all interfaces.");
+	ifacesListVerb = args_createVerb("list", "Lists the interface in a human or machine readable format.");
+	ifaceRootVerb = args_createVerb("iface", "Operations that affect a specific interface.");
 	ifaceProfileVerb = args_createVerb("profile", "Interacts with the profiles associated with an interface.");
+	// TODO: Add "profiles" to handle all with additional parameters shared with "iface list" 's ones.
 	
 	ifaceListShowAllOption = args_createOption(
 			'a', "show-all", "Shows all the possible fields.  (Same as -igds)", FLAG_OPTION_NONE);
@@ -74,21 +77,36 @@ bool prepareLaunchArguments() {
 	ifaceListShowFormattedStateOption = args_createOption(
 			'S', "show-state-text", "Shows the interface's state in a readable format.", FLAG_OPTION_NONE);
 	
-	return rootVerb != NULL && helpOption != NULL && args_registerOption(buildInfoOption, rootVerb) &&
+	/*ifaceProfileShowNameOption = args_createOption(
+			'n', "show-name", "Shows the profile info's name.", FLAG_OPTION_NONE);
+	// TODO: Check if it can have some control chars like SSIDs, don't be like wmic once it encounters emojis.
+	//ifaceProfileShowNameOption = args_createOption(
+	//		'N', "show-name-hex", "Shows the profile info's name.", FLAG_OPTION_NONE);
+	ifaceProfileShowFlagsOption = args_createOption(
+			'f', "show-flags", "Shows the profile info's flags.  (As an unsigned 32bit integer)", FLAG_OPTION_NONE);
+	ifaceProfileShowFormattedFlagsOption = args_createOption(
+			'F', "show-flags-text", "Shows the profile info's flags in a readable format.", FLAG_OPTION_NONE);*/
+	
+	return rootVerb != NULL && helpOption != NULL &&args_registerOption(buildInfoOption, rootVerb) &&
 		   args_registerOption(versionInfoOption, rootVerb) &&
 		   args_registerOption(versionOnlyInfoOption, rootVerb) &&
 		   args_registerOption(helpOption, rootVerb) &&
+		   // wifi ifaces [...]
+		   args_registerVerb(ifacesRootVerb, rootVerb) &&
+		   // wifi ifaces list [...]
+		   args_registerVerb(ifacesListVerb, ifacesRootVerb) &&
+		   args_registerOption(ifaceListShowAllOption, ifacesListVerb) &&
+		   args_registerOption(ifaceListShowIndexOption, ifacesListVerb) &&
+		   args_registerOption(ifaceListShowGuidOption, ifacesListVerb) &&
+		   args_registerOption(ifaceListShowDescriptionOption, ifacesListVerb) &&
+		   args_registerOption(ifaceListShowStateOption, ifacesListVerb) &&
+		   args_registerOption(ifaceListShowFormattedStateOption, ifacesListVerb) &&
+		   args_registerOption(textDelimiterOption, ifacesListVerb) &&
+		   // wifi iface <GUID/Index> [...]
 		   args_registerVerb(ifaceRootVerb, rootVerb) &&
-		   args_registerVerb(ifaceListVerb, ifaceRootVerb) &&
-		   args_registerOption(ifaceListShowAllOption, ifaceListVerb) &&
-		   args_registerOption(ifaceListShowIndexOption, ifaceListVerb) &&
-		   args_registerOption(ifaceListShowGuidOption, ifaceListVerb) &&
-		   args_registerOption(ifaceListShowDescriptionOption, ifaceListVerb) &&
-		   args_registerOption(ifaceListShowStateOption, ifaceListVerb) &&
-		   args_registerOption(ifaceListShowFormattedStateOption, ifaceListVerb) &&
-		   args_registerOption(textDelimiterOption, ifaceListVerb) &&
-		   args_registerVerb(ifaceProfileVerb, ifaceRootVerb) &&
-		   args_registerOption(ifaceGuidOption, ifaceProfileVerb);
+		   args_registerOption(ifaceGuidOption, ifaceProfileVerb) &&
+		   // wifi iface <GUID/Index> profile [...]
+		   args_registerVerb(ifaceProfileVerb, ifaceRootVerb);
 }
 
 /**
@@ -216,7 +234,7 @@ int main(int argc, char **argv) {
 		// wifi.exe iface [flags...]
 		printf("Hello, World! 123\n");
 		
-	} else if(lastUsedVerb == ifaceListVerb) {
+	} else if(lastUsedVerb == ifacesListVerb) {
 		// Preparing formatting info structure.
 		// TODO: Optimize this piece of shit with binary flags or something. - Is it really worth it tho ?
 		WifiInterfaceListingParameters formattingParams;

@@ -6,8 +6,8 @@ CLI utility that streamlines Wi-Fi device interaction on Windows through a varie
 ### Interface listing
 ```
 Usage:
-  wifi iface list [-h|--help] [-a|--show-all] [-i|--show-index] [-g|--show-guid] [-d|--show-description]
-                  [-s|--show-state] [-S|--show-state-text] [-D|--delimiter <DELIMITER>]
+  wifi ifaces list [-h|--help] [-a|--show-all] [-i|--show-index] [-g|--show-guid] [-d|--show-description]
+                   [-s|--show-state] [-S|--show-state-text] [-D|--delimiter <DELIMITER>]
 
 Options:
   -h, help         Shows this help text and exit.

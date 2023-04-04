@@ -15,3 +15,5 @@ Testing/
 Debug/
 
 build/
+venv/
+*.exe
