@@ -28,6 +28,15 @@ project("NibblePoker's Windows Wi-Fi CLI utility" C)
 message("---> Including CTest...")
 include(CTest)
 
+# Feature constants
+# Inherited from "https://github.com/aziascreations/C99-Utility-Libraries"
+message("--> Setting up features constants")
+if(WIN32)
+    message("---> Defining 'NP_WIN32' and 'NP_ARGS_WCHAR'")
+    add_definitions(-DNP_WIN32)
+    add_definitions(-DNP_ARGS_WCHAR)
+endif()
+
 # Getting some info
 message("--> System's debugging info printout:")
 message("---> System: ${CMAKE_SYSTEM_NAME}")
@@ -158,7 +167,7 @@ file(GLOB_RECURSE src_wifi_cli CONFIGURE_DEPENDS "src/cli/handlers/*.c" "src/cli
 
 add_executable(wifi_cli src/cli/main.c ${src_nibblepoker_c_goodies} ${src_wifi_commons} ${src_wifi_cli} rsc/rc/wifi-cli.rc)
 set_target_properties(wifi_cli PROPERTIES OUTPUT_NAME "wifi")
-set_target_properties(wifi_cli PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:CONSOLE")
+set_target_properties(wifi_cli PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:wmainCRTStartup /SUBSYSTEM:CONSOLE")
 target_link_libraries(wifi_cli Wlanapi.lib)
 target_compile_definitions(wifi_cli PUBLIC NP_DEBUG_LOGGING)  # Enables debugging and optional error logging.
 

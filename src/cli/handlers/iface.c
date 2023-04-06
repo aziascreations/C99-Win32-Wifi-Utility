@@ -24,7 +24,7 @@ void wifi_handler_ifaceListing(HANDLE hWlanClient, WifiInterfaceListingParameter
 	}
 }
 
-bool wifi_handler_getGuidFromListing(HANDLE hWlanClient, GUID *pOutputGuid, char* desiredGuid, int desiredIndex) {
+bool wifi_handler_getGuidFromListing(HANDLE hWlanClient, GUID *pOutputGuid, wchar_t* desiredGuid, int desiredIndex) {
 	if(hWlanClient == NULL || pOutputGuid == NULL) {
 		return false;
 	}
@@ -34,12 +34,15 @@ bool wifi_handler_getGuidFromListing(HANDLE hWlanClient, GUID *pOutputGuid, char
 	guidGetterParams.wasFound = false;
 	guidGetterParams.pOutputGuid = pOutputGuid;
 	if(desiredGuid != NULL) {
+		guidGetterParams.desiredGuid = desiredGuid;
+		
+		// Copying is no longer needed !
 		// We need to convert the string for the comparison later.
-		guidGetterParams.desiredGuid = charStringToWChar(desiredGuid);
-		if(guidGetterParams.desiredGuid == NULL) {
-			fprintf(stderr, "Unable to convert the desired GUID's string !  (Error #%d)\n", errno);
-			return false;
-		}
+		//guidGetterParams.desiredGuid = charStringToWChar(desiredGuid);
+		//if(guidGetterParams.desiredGuid == NULL) {
+		//	fprintf(stderr, "Unable to convert the desired GUID's string !  (Error #%d)\n", errno);
+		//	return false;
+		//}
 		
 		trace_println("We parsed the GUID: %ws", guidGetterParams.desiredGuid);
 	} else {
@@ -50,9 +53,10 @@ bool wifi_handler_getGuidFromListing(HANDLE hWlanClient, GUID *pOutputGuid, char
 	
 	DWORD dwResult = wifi_iface_iterateAll(hWlanClient, &cb_getInterfaceGuid, &guidGetterParams);
 	
-	if(desiredGuid != NULL) {
-		free(guidGetterParams.desiredGuid);
-	}
+	// No longer needed !
+	//if(desiredGuid != NULL) {
+	//	free(guidGetterParams.desiredGuid);
+	//}
 	
 	if(dwResult != ERROR_SUCCESS) {
 		fprintf(stderr, "Failed to list wlan interfaces !\n");
