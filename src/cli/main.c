@@ -281,7 +281,7 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 	
 	// If the '-P|--profile-name' option was used, it means it will be required later on, so we need to verify it now.
 	// If the option was required but not given, the parsing process will fail earlier and this code won't be reached.
-	wchar_t *ifaceProfileName;
+	wchar_t *ifaceProfileName = NULL;
 	if(args_wasOptionUsed(ifaceProfileNameOption)) {
 		trace_println("We need to verify the given iface profile name !");
 		trace_wprintln("> Input as wchar_t: '%wc'", ((wchar_t*) ifaceProfileNameOption->arguments->first->data)[0]);
@@ -344,9 +344,21 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 			// TODO: The rest
 		}
 		
-		//if() {
-		//
-		//}
+		// We now attempt to get the profile name from the input.
+		// If it ain't NULL, we're good and just need to free the old value in `ifaceProfileName` and move this new one.
+		wchar_t *foundProfileName = wifi_handler_getProfileNameFromInput(hWlanClient, &ifaceGuid, desiredIndex, ifaceProfileName);
+		
+		if(foundProfileName == NULL) {
+			fprintf(stderr, "Unable to find a profile with the given index or name !\n");
+			errorCode = 113;
+			goto END_CLOSE_WLAN_HANDLE;
+		}
+		
+		// We're in the clear.
+		free(ifaceProfileName);
+		ifaceProfileName = foundProfileName;
+		
+		trace_wprintln("Found the profile named '%ws' !", ifaceProfileName);
 	}
 	
 	// I couldn't use a switchcase, and I haven't implemented the "extra-data" parameter to the args yet so this will

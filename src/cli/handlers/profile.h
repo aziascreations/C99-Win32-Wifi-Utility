@@ -22,3 +22,6 @@ struct wifi_cli_iface_profile_formatting_params {
 
 void wifi_handler_ifaceProfilesListing(HANDLE hWlanClient, GUID *ifaceGuid,
 									   WifiInterfaceProfileListingParameters formattingParams);
+
+wchar_t *wifi_handler_getProfileNameFromInput(HANDLE hWlanClient, GUID *ifaceGuid, int desiredIndex,
+											  wchar_t *desiredName);
