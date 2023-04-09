@@ -28,3 +28,13 @@ DWORD wifi_profile_iterateAll(HANDLE hClient, GUID *pInterfaceGuid,
  * @return The human-readable text.
  */
 PWCHAR wifi_profile_formatInfoFlags(DWORD dwWlanProfileInfoFlags);
+
+/**
+ * Deletes all profiles from all interfaces or a given one.
+ * @param hClient
+ * @param pInterfaceGuid
+ * @param continueOnError
+ * @param errorCount
+ * @return The latest non `ERROR_SUCCESS` code if encountered, `ERROR_SUCCESS` otherwise.
+ */
+//DWORD wifi_profile_deleteAllProfiles(HANDLE hClient, GUID *pInterfaceGuid, bool continueOnError, int **errorCount);

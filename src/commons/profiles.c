@@ -1,5 +1,11 @@
 #include "profiles.h"
 
+// Private prototypes
+
+
+
+// Public functions
+
 DWORD wifi_profile_iterateAll(HANDLE hClient, GUID *pInterfaceGuid,
 							bool (*callback)(int profileIndex, WLAN_PROFILE_INFO *pProfileInfo, void *extraCbData),
 							void *extraCbData) {
@@ -48,3 +54,15 @@ PWCHAR wifi_profile_formatInfoFlags(DWORD dwWlanProfileInfoFlags) {
 	}
 }
 
+//DWORD wifi_profile_deleteAllProfiles(HANDLE hClient, GUID *pInterfaceGuid, bool continueOnError, int **errorCount) {
+//	if(hClient == NULL) {
+//		error_println("The Windows Wlan Server handle was NULL !");
+//		return ERROR_INVALID_PARAMETER;
+//	}
+//
+//	DWORD dwLatestError = ERROR_SUCCESS;
+//
+//
+//
+//	return dwLatestError;
+//}

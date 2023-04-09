@@ -10,6 +10,7 @@
 #endif
 
 #include "../../libs/nibblepoker-c-goodies/src/arguments/arguments.h"
+#include "../../libs/nibblepoker-c-goodies/src/arguments/help.h"
 #include "../../libs/nibblepoker-c-goodies/src/debug.h"
 #include "../../libs/nibblepoker-c-goodies/src/text.h"
 
@@ -18,6 +19,7 @@
 #include "./handlers/profile.h"
 
 static Verb *rootVerb, *ifaceRootVerb, *ifacesRootVerb, *ifacesListVerb, *ifaceProfilesVerb, *ifaceProfilesListVerb, *ifaceProfileVerb;
+static Verb *ifaceProfileDelete, *ifaceProfilesDelete, *ifacesProfilesDelete;
 
 // Recursively shared options
 static Option *helpOption;
@@ -84,7 +86,12 @@ bool prepareLaunchArguments() {
 	ifaceProfileVerb = args_createVerb(L"profile", L"Interacts with a profile associated with an interface.");
 	ifaceProfilesVerb = args_createVerb(L"profiles", L"Interacts with all the profiles associated with an interface.");
 	ifaceProfilesListVerb = args_createVerb(L"list", L"Lists the interface in a human or machine readable format.");
-	// TODO: Add "profiles" to handle all with additional parameters shared with "iface list" 's ones.
+	
+	ifaceProfileDelete = args_createVerb(L"delete", L"Deletes a given profile from the given interface");
+	ifaceProfilesDelete = args_createVerb(L"delete", L"Deletes all the profiles from the given interface");
+	
+	// TODO: Implement it !
+	//ifacesProfilesDelete = args_createVerb(L"delete", L"Deletes all the profiles from all the interfaces");
 	
 	// Somewhat shared
 	ifaceListShowAllOption = args_createOption(
@@ -113,7 +120,6 @@ bool prepareLaunchArguments() {
 	return rootVerb != NULL && helpOption != NULL && args_registerOption(buildInfoOption, rootVerb) &&
 		   args_registerOption(versionInfoOption, rootVerb) &&
 		   args_registerOption(versionOnlyInfoOption, rootVerb) &&
-		   args_registerOption(helpOption, rootVerb) &&
 		   // wifi ifaces [...]
 		   args_registerVerb(ifacesRootVerb, rootVerb) &&
 		   // wifi ifaces list [...]
@@ -133,6 +139,8 @@ bool prepareLaunchArguments() {
 		   args_registerOption(ifaceProfileNameOption, ifaceProfileVerb) &&
 		   args_registerOption(ifaceProfileNameAsNameOption, ifaceProfileVerb) &&
 		   args_registerOption(ifaceProfileNameAsIndexOption, ifaceProfileVerb) &&
+		   // wifi iface <GUID/Index> profile <ProfileName/Index> [--as-name|--as-index] delete
+		   args_registerVerb(ifaceProfileDelete, ifaceProfileVerb) &&
 		   // wifi iface <GUID/Index> profiles [...]
 		   args_registerVerb(ifaceProfilesVerb, ifaceRootVerb) &&
 		   // wifi iface <GUID/Index> profiles list [...]
@@ -142,7 +150,11 @@ bool prepareLaunchArguments() {
 		   args_registerOption(ifaceProfileShowFlagsOption, ifaceProfilesListVerb) &&
 		   args_registerOption(ifaceProfileShowFormattedFlagsOption, ifaceProfilesListVerb) &&
 		   args_registerOption(ifaceListShowIndexOption, ifaceProfilesListVerb) &&
-		   args_registerOption(ifaceProfileShowNameOption, ifaceProfilesListVerb);
+		   args_registerOption(ifaceProfileShowNameOption, ifaceProfilesListVerb) &&
+		   // wifi iface <GUID/Index> profiles delete
+		   args_registerVerb(ifaceProfilesDelete, ifaceProfilesVerb) &&
+		   // The -h, --help
+		   args_registerOptionRecursively(helpOption, rootVerb);
 }
 
 /**
@@ -191,9 +203,9 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 	
 	// Interpreting potentially exiting launch arguments.
 	if(argc <= 1 || helpOption->occurrences) {
-		printf("We should print the help text !\n");
+		trace_println("Printing the help text...");
 		
-		// TODO args_printHelpText(lastUsedVerb);
+		args_printHelpText(lastUsedVerb, L"ligma.exe", 80);
 		
 		goto END_CLEAN_ROOT_VERB;
 	}
@@ -206,11 +218,11 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 		} else if(versionOnlyInfoOption->occurrences) {
 			// The last number is "modulo-ed" with 100 to prevent it form being 3 integers long.
 			printf("%02d%02d%02d%02d\n", NP_BUILD_WIFI_CLI_VERSION_MAJOR, NP_BUILD_WIFI_CLI_VERSION_MINOR,
-				   NP_BUILD_WIFI_CLI_VERSION_PATCH, NP_BUILD_WIFI_CLI_VERSION_EXTRA % 100);
+				   5 /*NP_BUILD_WIFI_CLI_VERSION_PATCH*/, NP_BUILD_WIFI_CLI_VERSION_EXTRA % 100);
 		} else {
-			printf("Usage: ...");
+			printf("No options or action given, please use -h or --help for more info.");
 		}
-		return WIFI_EXIT_CODE_NO_ERROR;
+		goto END_CLEAN_ROOT_VERB;
 	}
 	
 	trace_println("Getting handle to Windows's Wlan Server...");
@@ -413,6 +425,24 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 		wifi_handler_ifaceProfilesListing(hWlanClient, &ifaceGuid, formattingParams);
 		
 		free(formattingParams.separator);
+	} else if(lastUsedVerb == ifaceProfileDelete) {
+		// Deleting a single profile from an interface
+		DWORD dwProfileDeletionResult = WlanDeleteProfile(hWlanClient, &ifaceGuid, ifaceProfileName, NULL);
+		if(dwProfileDeletionResult != ERROR_SUCCESS) {
+			if(dwProfileDeletionResult == ERROR_ACCESS_DENIED) {
+				fprintf(stderr, "Unable to delete '%ws' profile due to access restrictions !", ifaceProfileName);
+				errorCode = 200;
+			} else {
+				fprintf(stderr, "Unable to delete '%ws' profile !", ifaceProfileName);
+				errorCode = 201;
+			}
+		} else {
+			wprintf(L"Successfully deleted the '%ws' profile !", ifaceProfileName);
+		}
+	} else if(lastUsedVerb == ifaceProfilesDelete) {
+		// Deleting all profiles from an interface
+		
+		// Unable to delete one or more ...
 	} else {
 		fprintf(stderr, "The requested action wasn't processed in any way !\n");
 	}
