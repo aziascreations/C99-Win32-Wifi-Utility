@@ -1,10 +1,12 @@
+#define WIN32_LEAN_AND_MEAN
+
 #include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
 #include <wlanapi.h>
-#include <objbase.h>
 #include <wtypes.h>
+
 #ifndef NP_WIFI_NO_UTF8_CODE_PAGE
 #include <locale.h>
 #endif
@@ -12,14 +14,13 @@
 #include "../../libs/nibblepoker-c-goodies/src/arguments/arguments.h"
 #include "../../libs/nibblepoker-c-goodies/src/arguments/help.h"
 #include "../../libs/nibblepoker-c-goodies/src/debug.h"
-#include "../../libs/nibblepoker-c-goodies/src/text.h"
 
 #include "./exitCodes.h"
 #include "./handlers/iface.h"
 #include "./handlers/profile.h"
 
 static Verb *rootVerb, *ifaceRootVerb, *ifacesRootVerb, *ifacesListVerb, *ifaceProfilesVerb, *ifaceProfilesListVerb, *ifaceProfileVerb;
-static Verb *ifaceProfileDelete, *ifaceProfilesDelete, *ifacesProfilesDelete;
+static Verb *ifaceProfileDelete, *ifaceProfilesDelete, *ifacesProfilesDelete, *ifaceScanVerb, *ifacesScanVerb;
 
 // Recursively shared options
 static Option *helpOption;
@@ -41,7 +42,6 @@ bool prepareLaunchArguments() {
 	rootVerb = args_createVerb(L"root", L"Test");
 	
 	// Recursively shared options
-	// TODO: Add a args_registerRecursiveOption !
 	helpOption = args_createOption(
 			'h', L"help", L"Shows this help text and exit.", FLAG_OPTION_STOPS_PARSING);
 	
@@ -89,6 +89,9 @@ bool prepareLaunchArguments() {
 	
 	ifaceProfileDelete = args_createVerb(L"delete", L"Deletes a given profile from the given interface");
 	ifaceProfilesDelete = args_createVerb(L"delete", L"Deletes all the profiles from the given interface");
+	
+	ifaceScanVerb = args_createVerb(L"scan", L"Scan for available networks on given interface.");
+	ifacesScanVerb = args_createVerb(L"scan", L"Scan for available networks on all interfaces.");
 	
 	// TODO: Implement it !
 	//ifacesProfilesDelete = args_createVerb(L"delete", L"Deletes all the profiles from all the interfaces");
@@ -153,7 +156,10 @@ bool prepareLaunchArguments() {
 		   args_registerOption(ifaceProfileShowNameOption, ifaceProfilesListVerb) &&
 		   // wifi iface <GUID/Index> profiles delete
 		   args_registerVerb(ifaceProfilesDelete, ifaceProfilesVerb) &&
-		   // The -h, --help
+		   // wifi (ifaces|iface <GUID/Index>) scan  (Combined due to similarity)
+		   args_registerVerb(ifaceScanVerb, ifaceRootVerb) &&
+		   args_registerVerb(ifacesScanVerb, ifacesRootVerb) &&
+		   // "-h, --help" in all verbs
 		   args_registerOptionRecursively(helpOption, rootVerb);
 }
 
@@ -185,6 +191,10 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 	
 	// We prepare and attempt to parse the launch arguments.
 	Verb *lastUsedVerb = NULL;
+	
+	// Preparing other variables for later that may need to be freed.
+	// You will see their commented-out definition when relevant.
+	wchar_t *ifaceProfileName = NULL;
 	
 	if(!prepareLaunchArguments()) {
 		fprintf(stderr, "Failed to prepare the launch arguments parser !");
@@ -293,7 +303,8 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 	
 	// If the '-P|--profile-name' option was used, it means it will be required later on, so we need to verify it now.
 	// If the option was required but not given, the parsing process will fail earlier and this code won't be reached.
-	wchar_t *ifaceProfileName = NULL;
+	// Note: The variable below is declared at the top to prevent weird error when attempting to free it.
+	//wchar_t *ifaceProfileName = NULL;
 	if(args_wasOptionUsed(ifaceProfileNameOption)) {
 		trace_println("We need to verify the given iface profile name !");
 		trace_wprintln("> Input as wchar_t: '%wc'", ((wchar_t*) ifaceProfileNameOption->arguments->first->data)[0]);
@@ -352,8 +363,6 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 			}
 			
 			trace_wprintln("> Input as wchar_t*: '%ws'", ifaceProfileName);
-			
-			// TODO: The rest
 		}
 		
 		// We now attempt to get the profile name from the input.
@@ -443,9 +452,18 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 		// Deleting all profiles from an interface
 		
 		// Unable to delete one or more ...
+	} else if(lastUsedVerb == ifaceScanVerb) {
+		// Requesting scan from a specific interface
+		
+		// https://learn.microsoft.com/en-us/windows/win32/api/wlanapi/nf-wlanapi-wlanscan
+	} else if(lastUsedVerb == ifacesScanVerb) {
+		// Requesting scan from all interfaces
+		
 	} else {
 		fprintf(stderr, "The requested action wasn't processed in any way !\n");
 	}
+	
+	// TODO: https://learn.microsoft.com/en-us/windows/win32/api/wlanapi/nf-wlanapi-wlangetinterfacecapability
 	
 	// Exiting procedure
 	// The order is important here in order to make it simple to quit the app with "goto"s
@@ -460,9 +478,9 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 	
 	// Cleaning other variables that may have memory allocated to them.
 	trace_println("Cleaning other variables...");
-	//if(ifaceProfileName != NULL) {
-	//	free(ifaceProfileName);
-	//}
+	if(ifaceProfileName != NULL) {
+		free(ifaceProfileName);
+	}
 	
 	// FIXME: Check if it triggers when called from another language or a batch file !
 	// FIXME: Appears to silently crash the program once out of CLion...
