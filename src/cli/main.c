@@ -37,6 +37,8 @@ static Option *ifaceListShowAllOption, *ifaceListShowIndexOption, *ifaceListShow
 		*ifaceListShowStateOption, *ifaceListShowFormattedStateOption;
 static Option *ifaceProfileShowNameOption, *ifaceProfileShowFlagsOption, *ifaceProfileShowFormattedFlagsOption;
 
+static Option *ifaceProfilesDeletionSoftPrintingErrors, *ifaceProfilesDeletionSkipErrors;
+
 bool prepareLaunchArguments() {
 	// Root verb
 	rootVerb = args_createVerb(L"root", L"Test");
@@ -120,6 +122,12 @@ bool prepareLaunchArguments() {
 	ifaceProfileShowNameOption = args_createOption(
 			'n', L"show-name", L"Shows the profile info's name.", FLAG_OPTION_NONE);
 	
+	// What even are these sections supposed to represent, jesus...
+	ifaceProfilesDeletionSkipErrors = args_createOption(
+			's', L"skip-errors", L"Skips errors, will not return an error code if used 2+ times", FLAG_OPTION_REPEATABLE);
+	ifaceProfilesDeletionSoftPrintingErrors = args_createOption(
+			'S', L"soft-errors", L"Ignores any errors and will only report them in stdout.", FLAG_OPTION_NONE);
+	
 	return rootVerb != NULL && helpOption != NULL && args_registerOption(buildInfoOption, rootVerb) &&
 		   args_registerOption(versionInfoOption, rootVerb) &&
 		   args_registerOption(versionOnlyInfoOption, rootVerb) &&
@@ -154,8 +162,11 @@ bool prepareLaunchArguments() {
 		   args_registerOption(ifaceProfileShowFormattedFlagsOption, ifaceProfilesListVerb) &&
 		   args_registerOption(ifaceListShowIndexOption, ifaceProfilesListVerb) &&
 		   args_registerOption(ifaceProfileShowNameOption, ifaceProfilesListVerb) &&
+		   // TODO: Combine the broad deletion too !
 		   // wifi iface <GUID/Index> profiles delete
 		   args_registerVerb(ifaceProfilesDelete, ifaceProfilesVerb) &&
+		   args_registerOption(ifaceProfilesDeletionSkipErrors, ifaceProfilesDelete) &&
+		   args_registerOption(ifaceProfilesDeletionSoftPrintingErrors, ifaceProfilesDelete) &&
 		   // wifi (ifaces|iface <GUID/Index>) scan  (Combined due to similarity)
 		   args_registerVerb(ifaceScanVerb, ifaceRootVerb) &&
 		   args_registerVerb(ifacesScanVerb, ifacesRootVerb) &&
@@ -214,9 +225,7 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 	// Interpreting potentially exiting launch arguments.
 	if(argc <= 1 || helpOption->occurrences) {
 		trace_println("Printing the help text...");
-		
-		args_printHelpText(lastUsedVerb, L"ligma.exe", 80);
-		
+		args_printHelpText(lastUsedVerb, L"wifi.exe", 80);
 		goto END_CLEAN_ROOT_VERB;
 	}
 	
@@ -435,7 +444,7 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 		
 		free(formattingParams.separator);
 	} else if(lastUsedVerb == ifaceProfileDelete) {
-		// Deleting a single profile from an interface
+		// Deleting a single profile from an interface.
 		DWORD dwProfileDeletionResult = WlanDeleteProfile(hWlanClient, &ifaceGuid, ifaceProfileName, NULL);
 		if(dwProfileDeletionResult != ERROR_SUCCESS) {
 			if(dwProfileDeletionResult == ERROR_ACCESS_DENIED) {
@@ -449,9 +458,15 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 			wprintf(L"Successfully deleted the '%ws' profile !", ifaceProfileName);
 		}
 	} else if(lastUsedVerb == ifaceProfilesDelete) {
-		// Deleting all profiles from an interface
+		// Deleting all profiles from an interfaces.
+		DWORD deletionResult = wifi_handler_deleteAllProfiles(hWlanClient, &ifaceGuid,
+															  ifaceProfilesDeletionSkipErrors->occurrences > 0,
+															  ifaceProfilesDeletionSoftPrintingErrors->occurrences > 0);
 		
-		// Unable to delete one or more ...
+		// If the "-s" option was not used more than once.
+		if(deletionResult != ERROR_SUCCESS && ifaceProfilesDeletionSkipErrors->occurrences <= 1) {
+			errorCode = 300;
+		}
 	} else if(lastUsedVerb == ifaceScanVerb) {
 		// Requesting scan from a specific interface
 		

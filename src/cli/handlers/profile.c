@@ -7,11 +7,21 @@ struct wifi_cli_profile_getter_params {
 	wchar_t *foundName;
 };
 
+struct wifi_cli_profile_deleter_params {
+	HANDLE hWlanClient;
+	GUID *ifaceGuid;
+	bool continueOnError;
+	bool reportErrorsInStdout;
+	DWORD lastError;
+};
+
 // Private prototypes
 
 bool cb_listProfiles(int profileIndex, WLAN_PROFILE_INFO *pProfileInfo, void *extraCbData);
 
 bool cb_getProfileName(int profileIndex, WLAN_PROFILE_INFO *pProfileInfo, void *extraCbData);
+
+bool cb_deleteProfile(int profileIndex, WLAN_PROFILE_INFO *pProfileInfo, void *extraCbData);
 
 // Public functions
 
@@ -20,7 +30,7 @@ void wifi_handler_ifaceProfilesListing(HANDLE hWlanClient, GUID *ifaceGuid,
 	DWORD dwResult = wifi_profile_iterateAll(hWlanClient, ifaceGuid, &cb_listProfiles, &formattingParams);
 	
 	if(dwResult != ERROR_SUCCESS) {
-		fprintf(stderr, "Failed to list wlan interfaces' profiles !\n");
+		fprintf(stderr, "Failed to list wlan interfaces' profiles !  (Win32 Error %lu)\n", dwResult);
 	}
 }
 
@@ -33,7 +43,7 @@ wchar_t *wifi_handler_getProfileNameFromInput(HANDLE hWlanClient, GUID *ifaceGui
 	DWORD dwResult = wifi_profile_iterateAll(hWlanClient, ifaceGuid, &cb_getProfileName, &searchParams);
 	
 	if(dwResult != ERROR_SUCCESS) {
-		fprintf(stderr, "Failed to list wlan interfaces' profiles !\n");
+		fprintf(stderr, "Failed to list wlan interfaces' profiles !  (Win32 Error %lu)\n", dwResult);
 		
 		// Cleaning up, just in case.
 		if(searchParams.foundName != NULL) {
@@ -43,6 +53,63 @@ wchar_t *wifi_handler_getProfileNameFromInput(HANDLE hWlanClient, GUID *ifaceGui
 	}
 	
 	return searchParams.foundName;
+}
+
+DWORD wifi_handler_deleteAllProfilesFromAll(HANDLE hWlanClient, bool continueOnError, bool reportErrorsInStdout) {
+	DWORD returnedError = ERROR_SUCCESS;
+	
+	// Preparing some variables.
+	DWORD dwResult = ERROR_SUCCESS;
+	PWLAN_INTERFACE_INFO_LIST pIfList = NULL;
+	
+	dwResult = WlanEnumInterfaces(hWlanClient, NULL, &pIfList);
+	if(dwResult == ERROR_SUCCESS) {
+		for(int i = 0; i < (int) pIfList->dwNumberOfItems; i++) {
+			// We re-use "dwResult" for the errors returned for each interface
+			dwResult = wifi_handler_deleteAllProfiles(hWlanClient, &pIfList->InterfaceInfo[i].InterfaceGuid, continueOnError, reportErrorsInStdout);
+			
+			if(dwResult != ERROR_SUCCESS) {
+				returnedError = dwResult;
+				
+				if(!continueOnError) {
+					// We force the end of the loop if we shouldn't continue.
+					// The rest is handled like normal.
+					i = (int) pIfList->dwNumberOfItems;
+				}
+			}
+		}
+		
+		if(pIfList != NULL) {
+			WlanFreeMemory(pIfList);
+		}
+	}
+	
+	return returnedError;
+}
+
+DWORD wifi_handler_deleteAllProfiles(HANDLE hWlanClient, GUID *ifaceGuid, bool continueOnError, bool reportErrorsInStdout) {
+	// Preparing the parameters that will be passed to the callback.
+	// This isn't "optimized" for recursive call, but I won't spaghettify the code for the ONE in a billion guy
+	//  that has 100+ Wi-Fi interfaces and cannot wait a couple of cycles to save his own life.
+	// It's fast enough as-is.
+	struct wifi_cli_profile_deleter_params deletionParams;
+	deletionParams.hWlanClient = hWlanClient;
+	deletionParams.ifaceGuid = ifaceGuid;
+	deletionParams.continueOnError = continueOnError;
+	deletionParams.reportErrorsInStdout = reportErrorsInStdout;
+	deletionParams.lastError = ERROR_SUCCESS;
+	
+	// The official documentation isn't 100% clear on whether the iterating function will skip entries if we delete
+	//  them as we go, but we can assume it won't since we allocate a list for it.
+	DWORD dwResult = wifi_profile_iterateAll(hWlanClient, ifaceGuid, &cb_deleteProfile, &deletionParams);
+	
+	if(dwResult != ERROR_SUCCESS) {
+		fprintf(reportErrorsInStdout ? stdout : stderr,
+				"Failed to iterate over wlan interfaces' profiles !  (Win32 Error %lu)\n", dwResult);
+		return dwResult;
+	}
+	
+	return deletionParams.lastError;
 }
 
 // Private functions
@@ -98,5 +165,29 @@ bool cb_getProfileName(int profileIndex, WLAN_PROFILE_INFO *pProfileInfo, void *
 		}
 	}
 	
+	return true;
+}
+
+bool cb_deleteProfile(int profileIndex, WLAN_PROFILE_INFO *pProfileInfo, void *extraCbData) {
+	// "Should" be optimized when compiling to make direct calls to it instead.
+	struct wifi_cli_profile_deleter_params *params = extraCbData;
+	
+	debug_println("Deleting profile \"%ws\" from iface @%p", pProfileInfo->strProfileName, params->ifaceGuid);
+	DWORD dwProfileDeletionResult = WlanDeleteProfile(params->hWlanClient, params->ifaceGuid, pProfileInfo->strProfileName, NULL);
+	
+	if(dwProfileDeletionResult != ERROR_SUCCESS) {
+		// Printing the error to the appropriate output.
+		fprintf(params->reportErrorsInStdout ? stdout : stderr,
+				"Unable to delete profile \"%ws\" !  (Win32 Error %lu)\n",
+				pProfileInfo->strProfileName, dwProfileDeletionResult);
+		
+		// Relaying back the error.
+		params->lastError = dwProfileDeletionResult;
+		
+		// Checking if we should continue.
+		return params->continueOnError;
+	}
+	
+	// Normal execution's return value.
 	return true;
 }

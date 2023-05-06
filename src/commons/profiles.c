@@ -24,7 +24,7 @@ DWORD wifi_profile_iterateAll(HANDLE hClient, GUID *pInterfaceGuid,
 	if(dwResult == ERROR_SUCCESS) {
 		for(int i = 0; i < pProfileList->dwNumberOfItems; i++) {
 			if(!callback(i, (WLAN_PROFILE_INFO *) &pProfileList->ProfileInfo[i], extraCbData)) {
-				// If the callback tells us to stop iterating, we do.
+				// If the callback tells us to stop iterating by returning false, we do.
 				// The condition is more like `if(!shouldContinue)`, but its the same...
 				i = (int) pProfileList->dwNumberOfItems;
 			}
