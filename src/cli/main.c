@@ -19,8 +19,27 @@
 #include "./handlers/iface.h"
 #include "./handlers/profile.h"
 
-static Verb *rootVerb, *ifaceRootVerb, *ifacesRootVerb, *ifacesListVerb, *ifaceProfilesVerb, *ifaceProfilesListVerb, *ifaceProfileVerb;
-static Verb *ifaceProfileDelete, *ifaceProfilesDelete, *ifacesProfilesDelete, *ifaceScanVerb, *ifacesScanVerb;
+// Launch arguments' static variables
+
+// Root verb
+static Verb *rootVerb;
+
+// "iface[s]"
+static Verb *ifaceRootVerb, *ifacesRootVerb;
+
+// "iface (profile|profiles|scan)"
+static Verb *ifaceProfilesVerb, *ifaceScanVerb, *ifaceProfileVerb;
+// "iface profile delete"
+static Verb *ifaceProfileDelete;
+// "iface profiles (list|delete)"
+static Verb *ifaceProfilesDelete, *ifaceProfilesListVerb;
+
+// "ifaces (list|scan|profiles)"
+static Verb *ifacesListVerb, *ifacesScanVerb, *ifacesProfilesVerb;
+// "ifaces profiles (delete)"
+static Verb *ifacesProfilesDelete;
+
+// TODO: re-organize options declaration.
 
 // Recursively shared options
 static Option *helpOption;
@@ -89,8 +108,8 @@ bool prepareLaunchArguments() {
 	ifaceProfilesVerb = args_createVerb(L"profiles", L"Interacts with all the profiles associated with an interface.");
 	ifaceProfilesListVerb = args_createVerb(L"list", L"Lists the interface in a human or machine readable format.");
 	
-	ifaceProfileDelete = args_createVerb(L"delete", L"Deletes a given profile from the given interface");
-	ifaceProfilesDelete = args_createVerb(L"delete", L"Deletes all the profiles from the given interface");
+	ifaceProfileDelete = args_createVerb(L"delete", L"Deletes a given profile from the given interface.");
+	ifaceProfilesDelete = args_createVerb(L"delete", L"Deletes all the profiles from the given interface.");
 	
 	ifaceScanVerb = args_createVerb(L"scan", L"Scan for available networks on given interface.");
 	ifacesScanVerb = args_createVerb(L"scan", L"Scan for available networks on all interfaces.");
@@ -128,11 +147,17 @@ bool prepareLaunchArguments() {
 	ifaceProfilesDeletionSoftPrintingErrors = args_createOption(
 			'S', L"soft-errors", L"Ignores any errors and will only report them in stdout.", FLAG_OPTION_NONE);
 	
+	// To future me: Good luck re-ordering this mess, I couldn't be bothered and so should you if you want to keep your sanity.
+	ifacesProfilesVerb = args_createVerb(L"profiles", L"Interacts with every interface's profiles.");
+	ifacesProfilesDelete = args_createVerb(L"delete", L"Deletes all the profiles from all interfaces.");
+	
 	return rootVerb != NULL && helpOption != NULL && args_registerOption(buildInfoOption, rootVerb) &&
 		   args_registerOption(versionInfoOption, rootVerb) &&
 		   args_registerOption(versionOnlyInfoOption, rootVerb) &&
 		   // wifi ifaces [...]
 		   args_registerVerb(ifacesRootVerb, rootVerb) &&
+		   // wifi ifaces profiles [...]  (See below for combines verbs with the iface variant)
+		   args_registerVerb(ifacesProfilesVerb, ifacesRootVerb) &&
 		   // wifi ifaces list [...]
 		   args_registerVerb(ifacesListVerb, ifacesRootVerb) &&
 		   args_registerOption(ifaceListShowAllOption, ifacesListVerb) &&
@@ -162,11 +187,13 @@ bool prepareLaunchArguments() {
 		   args_registerOption(ifaceProfileShowFormattedFlagsOption, ifaceProfilesListVerb) &&
 		   args_registerOption(ifaceListShowIndexOption, ifaceProfilesListVerb) &&
 		   args_registerOption(ifaceProfileShowNameOption, ifaceProfilesListVerb) &&
-		   // TODO: Combine the broad deletion too !
-		   // wifi iface <GUID/Index> profiles delete
+		   // wifi (iface <GUID/Index>|ifaces) profiles delete  (Combined due to similarity)
 		   args_registerVerb(ifaceProfilesDelete, ifaceProfilesVerb) &&
 		   args_registerOption(ifaceProfilesDeletionSkipErrors, ifaceProfilesDelete) &&
 		   args_registerOption(ifaceProfilesDeletionSoftPrintingErrors, ifaceProfilesDelete) &&
+		   args_registerVerb(ifacesProfilesDelete, ifacesProfilesVerb) &&
+		   args_registerOption(ifaceProfilesDeletionSkipErrors, ifacesProfilesDelete) &&
+		   args_registerOption(ifaceProfilesDeletionSoftPrintingErrors, ifacesProfilesDelete) &&
 		   // wifi (ifaces|iface <GUID/Index>) scan  (Combined due to similarity)
 		   args_registerVerb(ifaceScanVerb, ifaceRootVerb) &&
 		   args_registerVerb(ifacesScanVerb, ifacesRootVerb) &&
@@ -458,10 +485,22 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 			wprintf(L"Successfully deleted the '%ws' profile !", ifaceProfileName);
 		}
 	} else if(lastUsedVerb == ifaceProfilesDelete) {
-		// Deleting all profiles from an interfaces.
-		DWORD deletionResult = wifi_handler_deleteAllProfiles(hWlanClient, &ifaceGuid,
-															  ifaceProfilesDeletionSkipErrors->occurrences > 0,
-															  ifaceProfilesDeletionSoftPrintingErrors->occurrences > 0);
+		// Deleting all profiles from one interface.
+		DWORD deletionResult = wifi_handler_deleteAllProfiles(
+				hWlanClient, &ifaceGuid,
+				ifaceProfilesDeletionSkipErrors->occurrences > 0,
+				ifaceProfilesDeletionSoftPrintingErrors->occurrences > 0);
+		
+		// If the "-s" option was not used more than once.
+		if(deletionResult != ERROR_SUCCESS && ifaceProfilesDeletionSkipErrors->occurrences <= 1) {
+			errorCode = 300;
+		}
+	} else if(lastUsedVerb == ifacesProfilesDelete) {
+		// Deleting all profiles from all interfaces.
+		DWORD deletionResult = wifi_handler_deleteAllProfilesFromAll(
+				hWlanClient,
+				ifaceProfilesDeletionSkipErrors->occurrences > 0,
+				ifaceProfilesDeletionSoftPrintingErrors->occurrences > 0);
 		
 		// If the "-s" option was not used more than once.
 		if(deletionResult != ERROR_SUCCESS && ifaceProfilesDeletionSkipErrors->occurrences <= 1) {
