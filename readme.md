@@ -1,5 +1,7 @@
+<img src="rsc/icons/pngs/wifi-cli_64_lossy.png" align="left">
+
 # Windows Wi-Fi CLI utility - **W.I.P**
-CLI utility that centralises and streamlines Wi-Fi device interaction on Windows through a variety of simple
+CLI utility that centralises and streamlines Wi-Fi device interaction on Windows through a variety of simple and
 automatable commands.
 
 ## Features
