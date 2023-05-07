@@ -1,6 +1,7 @@
 #include "iface.h"
 
 // Private structures
+
 struct wifi_cli_iface_guid_getter_params {
 	bool wasFound;
 	GUID *pOutputGuid;

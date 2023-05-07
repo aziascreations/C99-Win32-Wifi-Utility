@@ -16,6 +16,7 @@
 #include "../../libs/nibblepoker-c-goodies/src/debug.h"
 
 #include "./exitCodes.h"
+#include "./handlers/connection.h"
 #include "./handlers/iface.h"
 #include "./handlers/profile.h"
 
@@ -24,8 +25,8 @@
 // Root verb
 static Verb *rootVerb;
 
-// "iface[s]"
-static Verb *ifaceRootVerb, *ifacesRootVerb;
+// "(iface[s]|disconnect)"
+static Verb *ifaceRootVerb, *ifacesRootVerb, *disconnectRootVerb;
 
 // "iface (profile|profiles|scan)"
 static Verb *ifaceProfilesVerb, *ifaceScanVerb, *ifaceProfileVerb;
@@ -48,6 +49,8 @@ static Option *helpOption;
 static Option *textDelimiterOption, *ifaceGuidOption, *ifaceProfileNameOption;
 static Option *ifaceProfileNameAsNameOption, *ifaceProfileNameAsIndexOption;
 
+static Option *softErrorPrinting, *skipErrorEarlyExit;
+
 // Root's options
 static Option *buildInfoOption, *versionInfoOption, *versionOnlyInfoOption;
 
@@ -55,8 +58,6 @@ static Option *buildInfoOption, *versionInfoOption, *versionOnlyInfoOption;
 static Option *ifaceListShowAllOption, *ifaceListShowIndexOption, *ifaceListShowGuidOption, *ifaceListShowDescriptionOption,
 		*ifaceListShowStateOption, *ifaceListShowFormattedStateOption;
 static Option *ifaceProfileShowNameOption, *ifaceProfileShowFlagsOption, *ifaceProfileShowFormattedFlagsOption;
-
-static Option *ifaceProfilesDeletionSoftPrintingErrors, *ifaceProfilesDeletionSkipErrors;
 
 bool prepareLaunchArguments() {
 	// Root verb
@@ -142,18 +143,22 @@ bool prepareLaunchArguments() {
 			'n', L"show-name", L"Shows the profile info's name.", FLAG_OPTION_NONE);
 	
 	// What even are these sections supposed to represent, jesus...
-	ifaceProfilesDeletionSkipErrors = args_createOption(
+	skipErrorEarlyExit = args_createOption(
 			's', L"skip-errors", L"Skips errors, will not return an error code if used 2+ times", FLAG_OPTION_REPEATABLE);
-	ifaceProfilesDeletionSoftPrintingErrors = args_createOption(
+	softErrorPrinting = args_createOption(
 			'S', L"soft-errors", L"Ignores any errors and will only report them in stdout.", FLAG_OPTION_NONE);
 	
 	// To future me: Good luck re-ordering this mess, I couldn't be bothered and so should you if you want to keep your sanity.
 	ifacesProfilesVerb = args_createVerb(L"profiles", L"Interacts with every interface's profiles.");
 	ifacesProfilesDelete = args_createVerb(L"delete", L"Deletes all the profiles from all interfaces.");
 	
+	disconnectRootVerb = args_createVerb(L"disconnect", L"Disconnect from any connected network.");
+	
 	return rootVerb != NULL && helpOption != NULL && args_registerOption(buildInfoOption, rootVerb) &&
 		   args_registerOption(versionInfoOption, rootVerb) &&
 		   args_registerOption(versionOnlyInfoOption, rootVerb) &&
+		   // wifi disconnect
+		   args_registerVerb(disconnectRootVerb, rootVerb) &&
 		   // wifi ifaces [...]
 		   args_registerVerb(ifacesRootVerb, rootVerb) &&
 		   // wifi ifaces profiles [...]  (See below for combines verbs with the iface variant)
@@ -189,11 +194,11 @@ bool prepareLaunchArguments() {
 		   args_registerOption(ifaceProfileShowNameOption, ifaceProfilesListVerb) &&
 		   // wifi (iface <GUID/Index>|ifaces) profiles delete  (Combined due to similarity)
 		   args_registerVerb(ifaceProfilesDelete, ifaceProfilesVerb) &&
-		   args_registerOption(ifaceProfilesDeletionSkipErrors, ifaceProfilesDelete) &&
-		   args_registerOption(ifaceProfilesDeletionSoftPrintingErrors, ifaceProfilesDelete) &&
+		   args_registerOption(skipErrorEarlyExit, ifaceProfilesDelete) &&
+		   args_registerOption(softErrorPrinting, ifaceProfilesDelete) &&
 		   args_registerVerb(ifacesProfilesDelete, ifacesProfilesVerb) &&
-		   args_registerOption(ifaceProfilesDeletionSkipErrors, ifacesProfilesDelete) &&
-		   args_registerOption(ifaceProfilesDeletionSoftPrintingErrors, ifacesProfilesDelete) &&
+		   args_registerOption(skipErrorEarlyExit, ifacesProfilesDelete) &&
+		   args_registerOption(softErrorPrinting, ifacesProfilesDelete) &&
 		   // wifi (ifaces|iface <GUID/Index>) scan  (Combined due to similarity)
 		   args_registerVerb(ifaceScanVerb, ifaceRootVerb) &&
 		   args_registerVerb(ifacesScanVerb, ifacesRootVerb) &&
@@ -488,23 +493,34 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {
 		// Deleting all profiles from one interface.
 		DWORD deletionResult = wifi_handler_deleteAllProfiles(
 				hWlanClient, &ifaceGuid,
-				ifaceProfilesDeletionSkipErrors->occurrences > 0,
-				ifaceProfilesDeletionSoftPrintingErrors->occurrences > 0);
+				skipErrorEarlyExit->occurrences > 0,
+				softErrorPrinting->occurrences > 0);
 		
 		// If the "-s" option was not used more than once.
-		if(deletionResult != ERROR_SUCCESS && ifaceProfilesDeletionSkipErrors->occurrences <= 1) {
+		if(deletionResult != ERROR_SUCCESS && skipErrorEarlyExit->occurrences <= 1) {
 			errorCode = 300;
 		}
 	} else if(lastUsedVerb == ifacesProfilesDelete) {
 		// Deleting all profiles from all interfaces.
 		DWORD deletionResult = wifi_handler_deleteAllProfilesFromAll(
 				hWlanClient,
-				ifaceProfilesDeletionSkipErrors->occurrences > 0,
-				ifaceProfilesDeletionSoftPrintingErrors->occurrences > 0);
+				skipErrorEarlyExit->occurrences > 0,
+				softErrorPrinting->occurrences > 0);
 		
 		// If the "-s" option was not used more than once.
-		if(deletionResult != ERROR_SUCCESS && ifaceProfilesDeletionSkipErrors->occurrences <= 1) {
-			errorCode = 300;
+		if(deletionResult != ERROR_SUCCESS && skipErrorEarlyExit->occurrences <= 1) {
+			errorCode = 301;
+		}
+	} else if(lastUsedVerb == disconnectRootVerb) {
+		// Disconnecting on all interfaces
+		DWORD disconnectResult = wifi_handler_disconnectFromAll(
+				hWlanClient,
+				skipErrorEarlyExit->occurrences > 0,
+				softErrorPrinting->occurrences > 0);
+		
+		// If the "-s" option was not used more than once.
+		if(disconnectResult != ERROR_SUCCESS && skipErrorEarlyExit->occurrences <= 1) {
+			errorCode = 400;
 		}
 	} else if(lastUsedVerb == ifaceScanVerb) {
 		// Requesting scan from a specific interface

@@ -1,26 +1,35 @@
 <img src="rsc/icons/pngs/wifi-cli_64_lossy.png" align="left">
 
-# Windows Wi-Fi CLI utility - **W.I.P**
+# Windows Wi-Fi CLI utility
 CLI utility that centralises and streamlines Wi-Fi device interaction on Windows through a variety of simple and
 automatable commands.
 
-## Features
-**All features shown here may not be implemented yet.**
+**This software is a "portfolio demo" since the `netsh wlan` command handles most win32 functions !**<br>
+**It is safe to use, but there is no reason to use it instead of official *MS* tools.** 
 
-● Interface management<br>
-&nbsp;&nbsp;&nbsp;&nbsp;● Listing of associated data in human or machine-readable formats<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;● Info (Name, GUID, status)<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;● Properties (Background scanning toggle, RSSI, Chanel Number, ...)<br>
-&nbsp;&nbsp;&nbsp;&nbsp;● Modification of previously mentioned data where applicable<br>
-● Profile management<br>
-&nbsp;&nbsp;&nbsp;&nbsp;● Listing of info in human or machine-readable formats<br>
-&nbsp;&nbsp;&nbsp;&nbsp;● Deletion<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;● Per profile on a single interface<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;● All profiles per interface<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;● All profiles on all interfaces
+## Features
+* Interface management<br>
+  * Listing of associated data in human or machine-readable formats<br>
+    * Info (Name, GUID, status)<br>
+    * ~~Properties (Background scanning toggle, RSSI, Chanel Number, ...)~~<br>
+  * ~~Modification of previously mentioned data where applicable~~<br>
+* Profile management<br>
+  * Listing of info in human or machine-readable formats<br>
+  * Deletion<br>
+    * Per profile on a single interface<br>
+    * All profiles per interface<br>
+    * All profiles on all interfaces
+* Connection management
+  * Similar to `netsh wlan` commands
 
 ## Usage
 TODO: Redo this section
+
+<details open>
+<summary><b>Main usage</b>&nbsp;&nbsp;&nbsp;&nbsp;<sub><sup>(Click to open/close)</sup></sub></summary>
+123
+</details>
+
 
 ### Interface listing
 ```
